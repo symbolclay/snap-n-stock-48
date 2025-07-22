@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Users, Link2, Eye, Edit, Trash2, ExternalLink, Tag } from "lucide-react";
+import { Plus, Users, Link2, Eye, Edit, Trash2, ExternalLink, Tag, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Client {
@@ -37,6 +37,8 @@ const AdminPage = () => {
   const [showTagsDialog, setShowTagsDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [newClientName, setNewClientName] = useState("");
+  const [newCampaignName, setNewCampaignName] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   
@@ -102,10 +104,14 @@ const AdminPage = () => {
     }
   };
 
-  const createClient = async () => {
+  const createCampaign = async () => {
     if (!newClientName.trim()) return;
 
-    const slug = newClientName
+    const campaignFullName = newCampaignName.trim() 
+      ? `${newClientName} - ${newCampaignName}`
+      : newClientName;
+
+    const slug = campaignFullName
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -116,24 +122,25 @@ const AdminPage = () => {
     try {
       const { error } = await supabase
         .from('clients')
-        .insert({ name: newClientName, slug });
+        .insert({ name: campaignFullName, slug });
 
       if (error) throw error;
 
       toast({
-        title: "Cliente criado!",
-        description: "Novo cliente adicionado com sucesso"
+        title: "Campanha criada!",
+        description: "Nova campanha adicionada com sucesso"
       });
 
       setNewClientName("");
+      setNewCampaignName("");
       setShowNewClientDialog(false);
       loadClients();
     } catch (error: any) {
       toast({
         title: "Erro",
         description: error.message.includes('duplicate') 
-          ? "Já existe um cliente com esse nome" 
-          : "Não foi possível criar o cliente",
+          ? "Já existe uma campanha com esse nome" 
+          : "Não foi possível criar a campanha",
         variant: "destructive"
       });
     }
@@ -223,6 +230,11 @@ const AdminPage = () => {
     });
   };
 
+  // Filtrar clientes baseado na pesquisa
+  const filteredClients = clients.filter(client =>
+    client.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // Tela de login
   if (!isAuthenticated) {
     return (
@@ -265,7 +277,7 @@ const AdminPage = () => {
           <div className="flex gap-2">
             <Button onClick={() => setShowNewClientDialog(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Novo Cliente
+              Nova Campanha
             </Button>
             <Button variant="outline" onClick={() => setIsAuthenticated(false)}>
               Sair
@@ -274,10 +286,24 @@ const AdminPage = () => {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="p-6 pb-3">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Pesquisar cliente ou campanha..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
       {/* Clients Grid */}
-      <div className="p-6">
+      <div className="p-6 pt-0">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {clients.map((client) => (
+          {filteredClients.map((client) => (
             <Card key={client.id} className="p-6 hover:shadow-lg transition-shadow">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -336,25 +362,33 @@ const AdminPage = () => {
         </div>
       </div>
 
-      {/* New Client Dialog */}
+      {/* New Campaign Dialog */}
       <Dialog open={showNewClientDialog} onOpenChange={setShowNewClientDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Criar Novo Cliente</DialogTitle>
+            <DialogTitle>Criar Nova Campanha</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Input
               placeholder="Nome do cliente"
               value={newClientName}
               onChange={(e) => setNewClientName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && createClient()}
             />
+            <Input
+              placeholder="Nome da campanha (opcional)"
+              value={newCampaignName}
+              onChange={(e) => setNewCampaignName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && createCampaign()}
+            />
+            <div className="text-sm text-muted-foreground">
+              Resultado: {newClientName}{newCampaignName && ` - ${newCampaignName}`}
+            </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowNewClientDialog(false)}>
                 Cancelar
               </Button>
-              <Button onClick={createClient}>
-                Criar Cliente
+              <Button onClick={createCampaign}>
+                Criar Campanha
               </Button>
             </div>
           </div>
