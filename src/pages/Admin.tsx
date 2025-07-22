@@ -37,10 +37,32 @@ const AdminPage = () => {
   const [showTagsDialog, setShowTagsDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [newClientName, setNewClientName] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState("");
   
   useEffect(() => {
-    loadClients();
-  }, []);
+    if (isAuthenticated) {
+      loadClients();
+    }
+  }, [isAuthenticated]);
+
+  const handleLogin = () => {
+    if (password === "Fotos@Symbol") {
+      setIsAuthenticated(true);
+      setPassword("");
+      toast({
+        title: "Acesso autorizado",
+        description: "Bem-vindo ao painel administrativo"
+      });
+    } else {
+      toast({
+        title: "Senha incorreta",
+        description: "Tente novamente",
+        variant: "destructive"
+      });
+      setPassword("");
+    }
+  };
 
   const loadClients = async () => {
     try {
@@ -201,6 +223,35 @@ const AdminPage = () => {
     });
   };
 
+  // Tela de login
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-accent/20 flex items-center justify-center">
+        <Card className="w-full max-w-md p-6">
+          <div className="space-y-4">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-foreground">Painel Administrativo</h1>
+              <p className="text-muted-foreground">Digite a senha para acessar</p>
+            </div>
+            
+            <div className="space-y-4">
+              <Input
+                type="password"
+                placeholder="Senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+              />
+              <Button onClick={handleLogin} className="w-full">
+                Entrar
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-accent/20">
       {/* Header */}
@@ -211,10 +262,15 @@ const AdminPage = () => {
             <p className="text-muted-foreground">Gerencie clientes e produtos</p>
           </div>
           
-          <Button onClick={() => setShowNewClientDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Cliente
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setShowNewClientDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Cliente
+            </Button>
+            <Button variant="outline" onClick={() => setIsAuthenticated(false)}>
+              Sair
+            </Button>
+          </div>
         </div>
       </div>
 
