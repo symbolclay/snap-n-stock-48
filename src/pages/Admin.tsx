@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Users, Link2, Eye, Edit, Trash2, ExternalLink, Tag, Search } from "lucide-react";
+import { Plus, Users, Link2, Eye, Edit, Trash2, ExternalLink, Tag, Search, Download, Archive } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Client {
@@ -230,6 +230,55 @@ const AdminPage = () => {
     });
   };
 
+  const downloadImage = async (imageUrl: string, productName: string) => {
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${productName.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Download iniciado",
+        description: `Baixando foto de ${productName}`
+      });
+    } catch (error) {
+      toast({
+        title: "Erro no download",
+        description: "Não foi possível baixar a imagem",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const downloadAllImages = async (clientName: string) => {
+    try {
+      for (let i = 0; i < products.length; i++) {
+        const product = products[i];
+        // Delay entre downloads para evitar sobrecarga
+        setTimeout(() => {
+          downloadImage(product.imagem, `${clientName}_${product.nome}_${i + 1}`);
+        }, i * 500);
+      }
+      
+      toast({
+        title: "Downloads iniciados",
+        description: `Baixando ${products.length} fotos de ${clientName}`
+      });
+    } catch (error) {
+      toast({
+        title: "Erro nos downloads",
+        description: "Não foi possível baixar todas as imagens",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Filtrar clientes baseado na pesquisa
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -399,8 +448,19 @@ const AdminPage = () => {
       <Dialog open={showProductsDialog} onOpenChange={setShowProductsDialog}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              Produtos - {selectedClient?.name} ({products.length})
+            <DialogTitle className="flex items-center justify-between">
+              <span>Produtos - {selectedClient?.name} ({products.length})</span>
+              {products.length > 0 && (
+                <Button
+                  onClick={() => selectedClient && downloadAllImages(selectedClient.name)}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Archive className="h-4 w-4" />
+                  Baixar Todas
+                </Button>
+              )}
             </DialogTitle>
           </DialogHeader>
           
@@ -437,6 +497,14 @@ const AdminPage = () => {
                   </div>
 
                   <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => downloadImage(product.imagem, product.nome)}
+                    >
+                      <Download className="h-4 w-4 mr-1" />
+                      Baixar
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"

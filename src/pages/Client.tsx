@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import CameraCapture from "@/components/CameraCapture";
 import ProductForm from "@/components/ProductForm";
 import ProductGrid from "@/components/ProductGrid";
+import PhotoSuccess from "@/components/PhotoSuccess";
 import { Button } from "@/components/ui/button";
 import { Camera, Grid, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -29,9 +30,11 @@ const ClientPage = () => {
   const { toast } = useToast();
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<'camera' | 'form' | 'grid'>('camera');
+  const [currentView, setCurrentView] = useState<'camera' | 'form' | 'grid' | 'success'>('camera');
   const [capturedImage, setCapturedImage] = useState<string>("");
   const [products, setProducts] = useState<ProductData[]>([]);
+  const [lastSaveSuccess, setLastSaveSuccess] = useState(false);
+  const [lastSaveMessage, setLastSaveMessage] = useState("");
 
   useEffect(() => {
     if (!clientSlug) return;
@@ -113,23 +116,30 @@ const ClientPage = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Produto salvo!",
-        description: "Produto enviado com sucesso"
-      });
-
-      // Recarregar produtos e voltar para câmera
+      // Recarregar produtos
       await loadProducts(client.id);
-      setCurrentView('camera');
+      
+      // Mostrar tela de sucesso
+      setLastSaveSuccess(true);
+      setLastSaveMessage("Sua foto foi enviada com sucesso!");
+      setCurrentView('success');
       setCapturedImage("");
     } catch (error) {
       console.error('Erro ao salvar produto:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível salvar o produto",
-        variant: "destructive"
-      });
+      
+      // Mostrar tela de erro
+      setLastSaveSuccess(false);
+      setLastSaveMessage("Não foi possível enviar a foto. Tente novamente.");
+      setCurrentView('success');
     }
+  };
+
+  const handleContinuePhotos = () => {
+    setCurrentView('camera');
+  };
+
+  const handleFinishPhotos = () => {
+    setCurrentView('camera');
   };
 
   const handleDeleteProduct = async (productId: string) => {
@@ -251,6 +261,15 @@ const ClientPage = () => {
             onDeleteProduct={handleDeleteProduct}
             onClearAll={handleClearAll}
             onExport={handleExport}
+          />
+        )}
+
+        {currentView === 'success' && (
+          <PhotoSuccess
+            success={lastSaveSuccess}
+            message={lastSaveMessage}
+            onContinue={handleContinuePhotos}
+            onFinish={handleFinishPhotos}
           />
         )}
       </div>
