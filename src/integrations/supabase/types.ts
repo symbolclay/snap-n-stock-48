@@ -14,7 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clients: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          client_id: string
+          created_at: string
+          descricao: string | null
+          id: string
+          imagem: string
+          nome: string
+          preco_oferta: string | null
+          preco_regular: string
+          tags: Json | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          imagem: string
+          nome: string
+          preco_oferta?: string | null
+          preco_regular: string
+          tags?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          imagem?: string
+          nome?: string
+          preco_oferta?: string | null
+          preco_regular?: string
+          tags?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
