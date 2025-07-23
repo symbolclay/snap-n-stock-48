@@ -299,6 +299,9 @@ const ClientPage = () => {
               setCapturedImage("");
               setEditingProduct(null);
             }}
+            onRetakePhoto={() => {
+              setCurrentView('camera');
+            }}
           />
         )}
 

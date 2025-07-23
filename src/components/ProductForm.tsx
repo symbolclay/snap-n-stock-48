@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { X, Save, Package } from "lucide-react";
+import { X, Save, Package, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ProductData {
@@ -21,9 +21,10 @@ interface ProductFormProps {
   productData?: ProductData;
   onSave: (product: ProductData) => void;
   onClose: () => void;
+  onRetakePhoto?: () => void;
 }
 
-const ProductForm = ({ imageData, productData, onSave, onClose }: ProductFormProps) => {
+const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }: ProductFormProps) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     nome: productData?.nome || "",
@@ -142,12 +143,24 @@ const ProductForm = ({ imageData, productData, onSave, onClose }: ProductFormPro
       <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24">
         {/* Image Preview */}
         <Card className="p-4 animate-fade-in-up">
-          <div className="aspect-square rounded-xl overflow-hidden bg-secondary/20">
+          <div className="relative aspect-square rounded-xl overflow-hidden bg-secondary/20">
             <img 
               src={imageData} 
               alt="Produto capturado"
               className="w-full h-full object-cover"
             />
+            {productData && onRetakePhoto && (
+              <Button
+                onClick={onRetakePhoto}
+                variant="secondary"
+                size="sm"
+                className="absolute top-2 right-2 bg-background/80 hover:bg-background/90 backdrop-blur-sm"
+                disabled={isLoading}
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                Trocar Foto
+              </Button>
+            )}
           </div>
         </Card>
 

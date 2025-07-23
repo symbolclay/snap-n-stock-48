@@ -30,8 +30,9 @@ const CameraCapture = ({ onCapture, onClose }: CameraCaptureProps) => {
       const constraints = {
         video: {
           facingMode: "environment", // Câmera traseira
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30 }
         }
       };
 
@@ -70,7 +71,7 @@ const CameraCapture = ({ onCapture, onClose }: CameraCaptureProps) => {
         canvas.height = video.videoHeight;
         ctx.drawImage(video, 0, 0);
         
-        const imageData = canvas.toDataURL('image/jpeg', 0.8);
+        const imageData = canvas.toDataURL('image/jpeg', 0.95);
         setHasCapture(true);
         
         // Para o stream da câmera
