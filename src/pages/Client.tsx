@@ -6,7 +6,7 @@ import ProductForm from "@/components/ProductForm";
 import ProductGrid from "@/components/ProductGrid";
 import PhotoSuccess from "@/components/PhotoSuccess";
 import { Button } from "@/components/ui/button";
-import { Camera, Grid, ArrowLeft } from "lucide-react";
+import { Camera, Grid, ArrowLeft, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Client {
@@ -30,11 +30,12 @@ const ClientPage = () => {
   const { toast } = useToast();
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<'camera' | 'form' | 'grid' | 'success'>('camera');
+  const [currentView, setCurrentView] = useState<'camera' | 'form' | 'grid' | 'success' | 'edit'>('camera');
   const [capturedImage, setCapturedImage] = useState<string>("");
   const [products, setProducts] = useState<ProductData[]>([]);
   const [lastSaveSuccess, setLastSaveSuccess] = useState(false);
   const [lastSaveMessage, setLastSaveMessage] = useState("");
+  const [editingProduct, setEditingProduct] = useState<ProductData | null>(null);
 
   useEffect(() => {
     if (!clientSlug) return;
@@ -103,33 +104,60 @@ const ClientPage = () => {
     if (!client) return;
 
     try {
-      const { error } = await supabase
-        .from('products')
-        .insert({
-          client_id: client.id,
-          nome: productData.nome,
-          preco_regular: productData.preco_regular,
-          preco_oferta: productData.preco_oferta || null,
-          descricao: productData.descricao || null,
-          imagem: productData.imagem
-        });
+      if (editingProduct) {
+        // Atualizar produto existente
+        const { error } = await supabase
+          .from('products')
+          .update({
+            nome: productData.nome,
+            preco_regular: productData.preco_regular,
+            preco_oferta: productData.preco_oferta || null,
+            descricao: productData.descricao || null,
+            imagem: productData.imagem
+          })
+          .eq('id', editingProduct.id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      // Recarregar produtos
-      await loadProducts(client.id);
+        // Recarregar produtos
+        await loadProducts(client.id);
+        
+        // Mostrar tela de sucesso
+        setLastSaveSuccess(true);
+        setLastSaveMessage("Produto atualizado com sucesso!");
+        setCurrentView('success');
+        setEditingProduct(null);
+      } else {
+        // Inserir novo produto
+        const { error } = await supabase
+          .from('products')
+          .insert({
+            client_id: client.id,
+            nome: productData.nome,
+            preco_regular: productData.preco_regular,
+            preco_oferta: productData.preco_oferta || null,
+            descricao: productData.descricao || null,
+            imagem: productData.imagem
+          });
+
+        if (error) throw error;
+
+        // Recarregar produtos
+        await loadProducts(client.id);
+        
+        // Mostrar tela de sucesso
+        setLastSaveSuccess(true);
+        setLastSaveMessage("Sua foto foi enviada com sucesso!");
+        setCurrentView('success');
+      }
       
-      // Mostrar tela de sucesso
-      setLastSaveSuccess(true);
-      setLastSaveMessage("Sua foto foi enviada com sucesso!");
-      setCurrentView('success');
       setCapturedImage("");
     } catch (error) {
       console.error('Erro ao salvar produto:', error);
       
       // Mostrar tela de erro
       setLastSaveSuccess(false);
-      setLastSaveMessage("Não foi possível enviar a foto. Tente novamente.");
+      setLastSaveMessage("Não foi possível processar. Tente novamente.");
       setCurrentView('success');
     }
   };
@@ -178,6 +206,12 @@ const ClientPage = () => {
     } catch (error) {
       console.error('Erro ao limpar produtos:', error);
     }
+  };
+
+  const handleEditProduct = (product: ProductData) => {
+    setEditingProduct(product);
+    setCapturedImage(product.imagem);
+    setCurrentView('edit');
   };
 
   const handleExport = () => {
@@ -255,12 +289,26 @@ const ClientPage = () => {
           />
         )}
 
+        {currentView === 'edit' && editingProduct && (
+          <ProductForm
+            imageData={capturedImage}
+            productData={editingProduct}
+            onSave={handleSaveProduct}
+            onClose={() => {
+              setCurrentView('grid');
+              setCapturedImage("");
+              setEditingProduct(null);
+            }}
+          />
+        )}
+
         {currentView === 'grid' && (
           <ProductGrid
             products={products}
             onDeleteProduct={handleDeleteProduct}
             onClearAll={handleClearAll}
             onExport={handleExport}
+            onEditProduct={handleEditProduct}
           />
         )}
 

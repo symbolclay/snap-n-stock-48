@@ -18,17 +18,18 @@ interface ProductData {
 
 interface ProductFormProps {
   imageData: string;
+  productData?: ProductData;
   onSave: (product: ProductData) => void;
   onClose: () => void;
 }
 
-const ProductForm = ({ imageData, onSave, onClose }: ProductFormProps) => {
+const ProductForm = ({ imageData, productData, onSave, onClose }: ProductFormProps) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
-    nome: "",
-    preco_regular: "",
-    preco_oferta: "",
-    descricao: ""
+    nome: productData?.nome || "",
+    preco_regular: productData?.preco_regular || "",
+    preco_oferta: productData?.preco_oferta || "",
+    descricao: productData?.descricao || ""
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -129,7 +130,9 @@ const ProductForm = ({ imageData, onSave, onClose }: ProductFormProps) => {
           </Button>
           <div className="flex items-center gap-2">
             <Package className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Novo Produto</h2>
+            <h2 className="text-lg font-semibold">
+              {productData ? 'Editar Produto' : 'Novo Produto'}
+            </h2>
           </div>
           <div className="w-10" />
         </div>
@@ -229,7 +232,7 @@ const ProductForm = ({ imageData, onSave, onClose }: ProductFormProps) => {
           ) : (
             <>
               <Save className="h-4 w-4 mr-2" />
-              Salvar Produto
+              {productData ? 'Atualizar Produto' : 'Salvar Produto'}
             </>
           )}
         </Button>

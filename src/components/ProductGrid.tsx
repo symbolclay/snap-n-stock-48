@@ -21,9 +21,10 @@ interface ProductGridProps {
   onDeleteProduct: (id: string) => void;
   onClearAll: () => void;
   onExport: () => void;
+  onEditProduct?: (product: ProductData) => void;
 }
 
-const ProductGrid = ({ products, onDeleteProduct, onClearAll, onExport }: ProductGridProps) => {
+const ProductGrid = ({ products, onDeleteProduct, onClearAll, onExport, onEditProduct }: ProductGridProps) => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -132,6 +133,7 @@ const ProductGrid = ({ products, onDeleteProduct, onClearAll, onExport }: Produc
             <ProductCard
               product={product}
               onDelete={() => handleDeleteProduct(product.id)}
+              onEdit={onEditProduct ? () => onEditProduct(product) : undefined}
               onView={() => {
                 // TODO: Implementar modal de visualização
                 toast({
