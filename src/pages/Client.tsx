@@ -239,7 +239,7 @@ const ClientPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-accent/20">
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-accent/20 max-w-full overflow-x-hidden">
       {/* Header */}
       <div className="p-4 border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="flex items-center justify-between">
@@ -273,7 +273,7 @@ const ClientPage = () => {
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-4 max-w-full overflow-x-hidden">
         {currentView === 'camera' && (
           <CameraCapture onCapture={handlePhotoCapture} onClose={() => setCurrentView('camera')} />
         )}

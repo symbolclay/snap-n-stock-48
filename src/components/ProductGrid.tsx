@@ -69,7 +69,7 @@ const ProductGrid = ({ products, onDeleteProduct, onClearAll, onExport, onEditPr
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-x-hidden">
       {/* Header with Search and Stats */}
       <div className="space-y-4">
         {/* Search */}
@@ -103,7 +103,7 @@ const ProductGrid = ({ products, onDeleteProduct, onClearAll, onExport, onEditPr
         </Card>
 
         {/* Actions */}
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Button
             onClick={onExport}
             variant="outline"
@@ -124,7 +124,7 @@ const ProductGrid = ({ products, onDeleteProduct, onClearAll, onExport, onEditPr
       </div>
 
       {/* Products Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
         {filteredProducts.map((product, index) => (
           <div
             key={product.id}

@@ -143,7 +143,7 @@ const CameraCapture = ({ onCapture, onClose }: CameraCaptureProps) => {
         {/* Camera Frame Overlay */}
         <div className="absolute inset-0 pointer-events-none">
           {/* Frame corners */}
-          <div className={`absolute top-1/2 left-1/2 w-80 h-80 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ${
+          <div className={`absolute top-1/2 left-1/2 w-72 h-72 sm:w-80 sm:h-80 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ${
             isFrameGood ? 'border-2 border-primary animate-pulse-glow' : 'border-2 border-white/50'
           }`}>
             {/* Corner indicators */}

@@ -116,7 +116,7 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col max-w-full overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-border bg-card/50 backdrop-blur-sm flex-shrink-0">
         <div className="flex items-center justify-between">
@@ -140,7 +140,7 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-6 pb-24 max-w-full">
         {/* Image Preview */}
         <Card className="p-4 animate-fade-in-up">
           <div className="relative aspect-square rounded-xl overflow-hidden bg-secondary/20">
@@ -231,7 +231,7 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
       </div>
 
       {/* Bottom Actions */}
-      <div className="p-4 border-t border-border bg-card/50 backdrop-blur-sm flex-shrink-0 fixed bottom-0 left-0 right-0 z-10">
+      <div className="p-4 border-t border-border bg-card/50 backdrop-blur-sm flex-shrink-0 fixed bottom-0 left-0 right-0 z-10 max-w-full">
         <Button
           onClick={handleSave}
           disabled={isLoading}
