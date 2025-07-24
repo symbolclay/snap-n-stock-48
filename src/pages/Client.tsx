@@ -71,10 +71,24 @@ const ClientPage = () => {
 
   const loadProducts = async (clientId: string) => {
     try {
+      // Primeiro buscar a campanha padrão deste cliente
+      const { data: campaigns, error: campaignError } = await supabase
+        .from('campaigns')
+        .select('id')
+        .eq('client_id', clientId)
+        .eq('slug', 'principal')
+        .single();
+
+      if (campaignError || !campaigns) {
+        console.error('Campanha não encontrada:', campaignError);
+        setProducts([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('client_id', clientId)
+        .eq('campaign_id', campaigns.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -129,10 +143,22 @@ const ClientPage = () => {
         setEditingProduct(null);
       } else {
         // Inserir novo produto
+        // Primeiro, buscar a campanha padrão para este cliente
+        const { data: campaigns, error: campaignError } = await supabase
+          .from('campaigns')
+          .select('id')
+          .eq('client_id', client.id)
+          .eq('slug', 'principal')
+          .single();
+
+        if (campaignError || !campaigns) {
+          throw new Error('Campanha não encontrada');
+        }
+
         const { error } = await supabase
           .from('products')
           .insert({
-            client_id: client.id,
+            campaign_id: campaigns.id,
             nome: productData.nome,
             preco_regular: productData.preco_regular,
             preco_oferta: productData.preco_oferta || null,
@@ -191,10 +217,23 @@ const ClientPage = () => {
     if (!client) return;
 
     try {
+      // Primeiro buscar a campanha padrão deste cliente
+      const { data: campaigns, error: campaignError } = await supabase
+        .from('campaigns')
+        .select('id')
+        .eq('client_id', client.id)
+        .eq('slug', 'principal')
+        .single();
+
+      if (campaignError || !campaigns) {
+        console.error('Campanha não encontrada:', campaignError);
+        return;
+      }
+
       const { error } = await supabase
         .from('products')
         .delete()
-        .eq('client_id', client.id);
+        .eq('campaign_id', campaigns.id);
 
       if (error) throw error;
 

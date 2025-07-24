@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaigns: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           created_at: string
@@ -40,6 +75,7 @@ export type Database = {
       }
       products: {
         Row: {
+          campaign_id: string
           client_id: string
           created_at: string
           descricao: string | null
@@ -52,6 +88,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          campaign_id: string
           client_id: string
           created_at?: string
           descricao?: string | null
@@ -64,6 +101,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          campaign_id?: string
           client_id?: string
           created_at?: string
           descricao?: string | null
@@ -76,6 +114,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "products_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "products_client_id_fkey"
             columns: ["client_id"]
