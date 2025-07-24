@@ -30,7 +30,7 @@ const ClientPage = () => {
   const { toast } = useToast();
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<'welcome' | 'camera' | 'form' | 'grid' | 'success' | 'edit'>('welcome');
+  const [currentView, setCurrentView] = useState<'camera' | 'form' | 'grid' | 'success' | 'edit'>('camera');
   const [capturedImage, setCapturedImage] = useState<string>("");
   const [products, setProducts] = useState<ProductData[]>([]);
   const [lastSaveSuccess, setLastSaveSuccess] = useState(false);
@@ -71,24 +71,10 @@ const ClientPage = () => {
 
   const loadProducts = async (clientId: string) => {
     try {
-      // Primeiro buscar a campanha padrão deste cliente
-      const { data: campaigns, error: campaignError } = await supabase
-        .from('campaigns')
-        .select('id')
-        .eq('client_id', clientId)
-        .eq('slug', 'principal')
-        .single();
-
-      if (campaignError || !campaigns) {
-        console.error('Campanha não encontrada:', campaignError);
-        setProducts([]);
-        return;
-      }
-
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('campaign_id', campaigns.id)
+        .eq('client_id', clientId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -143,22 +129,10 @@ const ClientPage = () => {
         setEditingProduct(null);
       } else {
         // Inserir novo produto
-        // Primeiro, buscar a campanha padrão para este cliente
-        const { data: campaigns, error: campaignError } = await supabase
-          .from('campaigns')
-          .select('id')
-          .eq('client_id', client.id)
-          .eq('slug', 'principal')
-          .single();
-
-        if (campaignError || !campaigns) {
-          throw new Error('Campanha não encontrada');
-        }
-
         const { error } = await supabase
           .from('products')
           .insert({
-            campaign_id: campaigns.id,
+            client_id: client.id,
             nome: productData.nome,
             preco_regular: productData.preco_regular,
             preco_oferta: productData.preco_oferta || null,
@@ -189,11 +163,11 @@ const ClientPage = () => {
   };
 
   const handleContinuePhotos = () => {
-    setCurrentView('welcome');
+    setCurrentView('camera');
   };
 
   const handleFinishPhotos = () => {
-    setCurrentView('welcome');
+    setCurrentView('camera');
   };
 
   const handleDeleteProduct = async (productId: string) => {
@@ -217,23 +191,10 @@ const ClientPage = () => {
     if (!client) return;
 
     try {
-      // Primeiro buscar a campanha padrão deste cliente
-      const { data: campaigns, error: campaignError } = await supabase
-        .from('campaigns')
-        .select('id')
-        .eq('client_id', client.id)
-        .eq('slug', 'principal')
-        .single();
-
-      if (campaignError || !campaigns) {
-        console.error('Campanha não encontrada:', campaignError);
-        return;
-      }
-
       const { error } = await supabase
         .from('products')
         .delete()
-        .eq('campaign_id', campaigns.id);
+        .eq('client_id', client.id);
 
       if (error) throw error;
 
@@ -299,9 +260,9 @@ const ClientPage = () => {
             </Button>
             
             <Button
-              variant={currentView === 'camera' || currentView === 'welcome' ? 'default' : 'outline'}
+              variant={currentView === 'camera' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setCurrentView('welcome')}
+              onClick={() => setCurrentView('camera')}
               className="flex items-center gap-2"
             >
               <Camera className="h-4 w-4" />
@@ -313,46 +274,8 @@ const ClientPage = () => {
 
       {/* Content */}
       <div className="p-4 max-w-full overflow-x-hidden">
-        {currentView === 'welcome' && (
-          <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
-            <div className="space-y-4">
-              <div className="w-24 h-24 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
-                <Camera className="w-12 h-12 text-primary" />
-              </div>
-              <h2 className="text-2xl font-bold text-foreground">Bem-vindo!</h2>
-              <p className="text-muted-foreground max-w-md">
-                Tire fotos dos seus produtos e adicione as informações necessárias.
-                {products.length > 0 && ` Você já tem ${products.length} produto${products.length === 1 ? '' : 's'} cadastrado${products.length === 1 ? '' : 's'}.`}
-              </p>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button
-                onClick={() => setCurrentView('camera')}
-                size="lg"
-                className="flex items-center gap-2"
-              >
-                <Camera className="w-5 h-5" />
-                Tirar Foto
-              </Button>
-              
-              {products.length > 0 && (
-                <Button
-                  onClick={() => setCurrentView('grid')}
-                  variant="outline"
-                  size="lg"
-                  className="flex items-center gap-2"
-                >
-                  <Grid className="w-5 h-5" />
-                  Ver Produtos ({products.length})
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-
         {currentView === 'camera' && (
-          <CameraCapture onCapture={handlePhotoCapture} onClose={() => setCurrentView('welcome')} />
+          <CameraCapture onCapture={handlePhotoCapture} onClose={() => setCurrentView('camera')} />
         )}
 
         {currentView === 'form' && (
@@ -360,7 +283,7 @@ const ClientPage = () => {
             imageData={capturedImage}
             onSave={handleSaveProduct}
             onClose={() => {
-              setCurrentView('welcome');
+              setCurrentView('camera');
               setCapturedImage("");
             }}
           />
