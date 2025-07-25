@@ -30,13 +30,9 @@ const CameraCapture = ({ onCapture, onClose }: CameraCaptureProps) => {
       const constraints = {
         video: {
           facingMode: "environment", // Câmera traseira
-          width: { ideal: 4096, max: 4096 },
-          height: { ideal: 2304, max: 2304 },
-          frameRate: { ideal: 30, max: 60 },
-          aspectRatio: { ideal: 16/9 },
-          focusMode: "continuous",
-          exposureMode: "continuous",
-          whiteBalanceMode: "continuous"
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30 }
         }
       };
 
@@ -71,22 +67,11 @@ const CameraCapture = ({ onCapture, onClose }: CameraCaptureProps) => {
       const ctx = canvas.getContext('2d');
 
       if (ctx) {
-        // Define a resolução máxima para captura
-        const maxWidth = Math.min(video.videoWidth, 4096);
-        const maxHeight = Math.min(video.videoHeight, 2304);
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
         
-        canvas.width = maxWidth;
-        canvas.height = maxHeight;
-        
-        // Configurações para melhor qualidade
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        
-        // Desenha a imagem com a melhor qualidade possível
-        ctx.drawImage(video, 0, 0, maxWidth, maxHeight);
-        
-        // Converte para JPEG com qualidade máxima
-        const imageData = canvas.toDataURL('image/jpeg', 1.0);
+        const imageData = canvas.toDataURL('image/jpeg', 0.95);
         setHasCapture(true);
         
         // Para o stream da câmera
