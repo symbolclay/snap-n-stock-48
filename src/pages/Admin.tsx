@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Users, Link2, Eye, Edit, Trash2, ExternalLink, Tag, Search, Download, Archive } from "lucide-react";
+import { Plus, Users, Link2, Eye, Edit, Trash2, ExternalLink, Search, Calendar, Camera, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Client {
@@ -16,31 +15,31 @@ interface Client {
   created_at: string;
 }
 
-interface Product {
+interface Campaign {
   id: string;
-  nome: string;
-  preco_regular: string;
-  preco_oferta: string;
-  descricao: string;
-  imagem: string;
-  tags: { google: boolean; meta: boolean };
+  name: string;
+  slug: string;
+  client_id: string;
   created_at: string;
+  updated_at: string;
+  product_count?: number;
 }
 
 const AdminPage = () => {
   const { toast } = useToast();
   const [clients, setClients] = useState<Client[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
   const [showNewClientDialog, setShowNewClientDialog] = useState(false);
-  const [showProductsDialog, setShowProductsDialog] = useState(false);
-  const [showTagsDialog, setShowTagsDialog] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showNewCampaignDialog, setShowNewCampaignDialog] = useState(false);
+  const [showEditCampaignDialog, setShowEditCampaignDialog] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [newClientName, setNewClientName] = useState("");
   const [newCampaignName, setNewCampaignName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
+  const [currentView, setCurrentView] = useState<'clients' | 'campaigns'>('clients');
   
   useEffect(() => {
     if (isAuthenticated) {
@@ -80,38 +79,39 @@ const AdminPage = () => {
     }
   };
 
-  const loadProducts = async (clientId: string) => {
+  const loadCampaigns = async (clientId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('products')
+      const { data: campaignsData, error: campaignsError } = await supabase
+        .from('campaigns')
         .select('*')
         .eq('client_id', clientId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setProducts((data || []).map(product => ({
-        id: product.id,
-        nome: product.nome,
-        preco_regular: product.preco_regular,
-        preco_oferta: product.preco_oferta || "",
-        descricao: product.descricao || "",
-        imagem: product.imagem,
-        tags: (product.tags as any) || { google: false, meta: false },
-        created_at: product.created_at
-      })));
+      if (campaignsError) throw campaignsError;
+
+      // Get product count for each campaign
+      const campaignsWithCount = await Promise.all((campaignsData || []).map(async (campaign) => {
+        const { count } = await supabase
+          .from('products')
+          .select('*', { count: 'exact', head: true })
+          .eq('campaign_id', campaign.id);
+        
+        return {
+          ...campaign,
+          product_count: count || 0
+        };
+      }));
+
+      setCampaigns(campaignsWithCount);
     } catch (error) {
-      console.error('Erro ao carregar produtos:', error);
+      console.error('Erro ao carregar campanhas:', error);
     }
   };
 
-  const createCampaign = async () => {
+  const createClient = async () => {
     if (!newClientName.trim()) return;
 
-    const campaignFullName = newCampaignName.trim() 
-      ? `${newClientName} - ${newCampaignName}`
-      : newClientName;
-
-    const slug = campaignFullName
+    const slug = newClientName
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -122,7 +122,48 @@ const AdminPage = () => {
     try {
       const { error } = await supabase
         .from('clients')
-        .insert({ name: campaignFullName, slug });
+        .insert({ name: newClientName, slug });
+
+      if (error) throw error;
+
+      toast({
+        title: "Cliente criado!",
+        description: "Novo cliente adicionado com sucesso"
+      });
+
+      setNewClientName("");
+      setShowNewClientDialog(false);
+      loadClients();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message.includes('duplicate') 
+          ? "Já existe um cliente com esse nome" 
+          : "Não foi possível criar o cliente",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const createCampaign = async () => {
+    if (!newCampaignName.trim() || !selectedClient) return;
+
+    const slug = newCampaignName
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9\s]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+    try {
+      const { error } = await supabase
+        .from('campaigns')
+        .insert({ 
+          name: newCampaignName, 
+          slug: `${selectedClient.slug}-${slug}`,
+          client_id: selectedClient.id 
+        });
 
       if (error) throw error;
 
@@ -131,16 +172,55 @@ const AdminPage = () => {
         description: "Nova campanha adicionada com sucesso"
       });
 
-      setNewClientName("");
       setNewCampaignName("");
-      setShowNewClientDialog(false);
-      loadClients();
+      setShowNewCampaignDialog(false);
+      loadCampaigns(selectedClient.id);
     } catch (error: any) {
       toast({
         title: "Erro",
         description: error.message.includes('duplicate') 
           ? "Já existe uma campanha com esse nome" 
           : "Não foi possível criar a campanha",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateCampaign = async () => {
+    if (!newCampaignName.trim() || !editingCampaign || !selectedClient) return;
+
+    const slug = newCampaignName
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9\s]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+    try {
+      const { error } = await supabase
+        .from('campaigns')
+        .update({ 
+          name: newCampaignName, 
+          slug: `${selectedClient.slug}-${slug}`
+        })
+        .eq('id', editingCampaign.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Campanha atualizada!",
+        description: "Campanha foi editada com sucesso"
+      });
+
+      setNewCampaignName("");
+      setEditingCampaign(null);
+      setShowEditCampaignDialog(false);
+      loadCampaigns(selectedClient.id);
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar a campanha",
         variant: "destructive"
       });
     }
@@ -157,7 +237,7 @@ const AdminPage = () => {
 
       toast({
         title: "Cliente removido",
-        description: "Cliente e todos os produtos foram excluídos"
+        description: "Cliente e todas as campanhas foram excluídos"
       });
 
       loadClients();
@@ -166,122 +246,56 @@ const AdminPage = () => {
     }
   };
 
-  const updateProductTags = async (productId: string, tags: { google: boolean; meta: boolean }) => {
+  const deleteCampaign = async (campaignId: string) => {
     try {
       const { error } = await supabase
-        .from('products')
-        .update({ tags })
-        .eq('id', productId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Tags atualizadas",
-        description: "Tags do produto foram salvas"
-      });
-
-      if (selectedClient) {
-        loadProducts(selectedClient.id);
-      }
-    } catch (error) {
-      console.error('Erro ao atualizar tags:', error);
-    }
-  };
-
-  const deleteProduct = async (productId: string) => {
-    try {
-      const { error } = await supabase
-        .from('products')
+        .from('campaigns')
         .delete()
-        .eq('id', productId);
+        .eq('id', campaignId);
 
       if (error) throw error;
 
       toast({
-        title: "Produto removido",
-        description: "Produto foi excluído"
+        title: "Campanha removida",
+        description: "Campanha e todos os produtos foram excluídos"
       });
 
       if (selectedClient) {
-        loadProducts(selectedClient.id);
+        loadCampaigns(selectedClient.id);
       }
     } catch (error) {
-      console.error('Erro ao deletar produto:', error);
+      console.error('Erro ao deletar campanha:', error);
     }
   };
 
-  const viewClientProducts = async (client: Client) => {
+  const viewClientCampaigns = async (client: Client) => {
     setSelectedClient(client);
-    await loadProducts(client.id);
-    setShowProductsDialog(true);
+    await loadCampaigns(client.id);
+    setCurrentView('campaigns');
   };
 
-  const openTagsDialog = (product: Product) => {
-    setSelectedProduct(product);
-    setShowTagsDialog(true);
+  const editCampaign = (campaign: Campaign) => {
+    setEditingCampaign(campaign);
+    setNewCampaignName(campaign.name);
+    setShowEditCampaignDialog(true);
   };
 
-  const copyClientLink = (slug: string) => {
-    const link = `${window.location.origin}/cliente/${slug}`;
+  const copyCampaignLink = (slug: string) => {
+    const link = `${window.location.origin}/campanha/${slug}`;
     navigator.clipboard.writeText(link);
     toast({
       title: "Link copiado!",
-      description: "Link do cliente copiado para a área de transferência"
+      description: "Link da campanha copiado para a área de transferência"
     });
   };
 
-  const downloadImage = async (imageUrl: string, productName: string) => {
-    try {
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${productName.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      toast({
-        title: "Download iniciado",
-        description: `Baixando foto de ${productName}`
-      });
-    } catch (error) {
-      toast({
-        title: "Erro no download",
-        description: "Não foi possível baixar a imagem",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const downloadAllImages = async (clientName: string) => {
-    try {
-      for (let i = 0; i < products.length; i++) {
-        const product = products[i];
-        // Delay entre downloads para evitar sobrecarga
-        setTimeout(() => {
-          downloadImage(product.imagem, `${clientName}_${product.nome}_${i + 1}`);
-        }, i * 500);
-      }
-      
-      toast({
-        title: "Downloads iniciados",
-        description: `Baixando ${products.length} fotos de ${clientName}`
-      });
-    } catch (error) {
-      toast({
-        title: "Erro nos downloads",
-        description: "Não foi possível baixar todas as imagens",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Filtrar clientes baseado na pesquisa
+  // Filtrar baseado na pesquisa
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredCampaigns = campaigns.filter(campaign =>
+    campaign.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Tela de login
@@ -318,16 +332,43 @@ const AdminPage = () => {
       {/* Header */}
       <div className="p-6 border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Painel Administrativo</h1>
-            <p className="text-muted-foreground">Gerencie clientes e produtos</p>
+          <div className="flex items-center gap-4">
+            {currentView === 'campaigns' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setCurrentView('clients');
+                  setSelectedClient(null);
+                }}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Voltar
+              </Button>
+            )}
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">
+                {currentView === 'clients' ? 'Painel Administrativo' : `Campanhas - ${selectedClient?.name}`}
+              </h1>
+              <p className="text-muted-foreground">
+                {currentView === 'clients' ? 'Gerencie clientes e campanhas' : 'Gerencie campanhas do cliente'}
+              </p>
+            </div>
           </div>
           
           <div className="flex gap-2">
-            <Button onClick={() => setShowNewClientDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Campanha
-            </Button>
+            {currentView === 'clients' ? (
+              <Button onClick={() => setShowNewClientDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Cliente
+              </Button>
+            ) : (
+              <Button onClick={() => setShowNewCampaignDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Campanha
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setIsAuthenticated(false)}>
               Sair
             </Button>
@@ -341,7 +382,7 @@ const AdminPage = () => {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Pesquisar cliente ou campanha..."
+            placeholder={currentView === 'clients' ? "Pesquisar cliente..." : "Pesquisar campanha..."}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -349,91 +390,159 @@ const AdminPage = () => {
         </div>
       </div>
 
-      {/* Clients Grid */}
+      {/* Content Grid */}
       <div className="p-6 pt-0">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredClients.map((client) => (
-            <Card key={client.id} className="p-6 hover:shadow-lg transition-shadow">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">{client.name}</h3>
-                  <Users className="h-5 w-5 text-muted-foreground" />
-                </div>
-                
-                <p className="text-sm text-muted-foreground">
-                  Criado em {new Date(client.created_at).toLocaleDateString('pt-BR')}
-                </p>
-
-                <div className="flex flex-col gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => copyClientLink(client.slug)}
-                    className="justify-start"
-                  >
-                    <Link2 className="h-4 w-4 mr-2" />
-                    Copiar Link
-                  </Button>
+          {currentView === 'clients' ? (
+            // Clients View
+            filteredClients.map((client) => (
+              <Card key={client.id} className="p-6 hover:shadow-lg transition-shadow">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">{client.name}</h3>
+                    <Users className="h-5 w-5 text-muted-foreground" />
+                  </div>
                   
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => viewClientProducts(client)}
-                    className="justify-start"
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    Ver Produtos
-                  </Button>
+                  <p className="text-sm text-muted-foreground">
+                    Criado em {new Date(client.created_at).toLocaleDateString('pt-BR')}
+                  </p>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(`/cliente/${client.slug}`, '_blank')}
-                    className="justify-start"
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Abrir Página
-                  </Button>
-                  
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => deleteClient(client.id)}
-                    className="justify-start"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir Cliente
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => viewClientCampaigns(client)}
+                      className="justify-start"
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Ver Campanhas
+                    </Button>
+                    
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => deleteClient(client.id)}
+                      className="justify-start"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir Cliente
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ))
+          ) : (
+            // Campaigns View
+            filteredCampaigns.map((campaign) => (
+              <Card key={campaign.id} className="p-6 hover:shadow-lg transition-shadow">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">{campaign.name}</h3>
+                    <Camera className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Criada em {new Date(campaign.created_at).toLocaleDateString('pt-BR')}
+                    </p>
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Camera className="h-4 w-4" />
+                      {campaign.product_count || 0} fotos
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyCampaignLink(campaign.slug)}
+                      className="justify-start"
+                    >
+                      <Link2 className="h-4 w-4 mr-2" />
+                      Copiar Link
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(`/campanha/${campaign.slug}`, '_blank')}
+                      className="justify-start"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Abrir Campanha
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => editCampaign(campaign)}
+                      className="justify-start"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar Nome
+                    </Button>
+                    
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => deleteCampaign(campaign.id)}
+                      className="justify-start"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir Campanha
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))
+          )}
         </div>
       </div>
 
-      {/* New Campaign Dialog */}
+      {/* New Client Dialog */}
       <Dialog open={showNewClientDialog} onOpenChange={setShowNewClientDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Criar Nova Campanha</DialogTitle>
+            <DialogTitle>Criar Novo Cliente</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Input
               placeholder="Nome do cliente"
               value={newClientName}
               onChange={(e) => setNewClientName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && createClient()}
             />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowNewClientDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={createClient}>
+                Criar Cliente
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Campaign Dialog */}
+      <Dialog open={showNewCampaignDialog} onOpenChange={setShowNewCampaignDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar Nova Campanha</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
             <Input
-              placeholder="Nome da campanha (opcional)"
+              placeholder="Nome da campanha"
               value={newCampaignName}
               onChange={(e) => setNewCampaignName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && createCampaign()}
             />
             <div className="text-sm text-muted-foreground">
-              Resultado: {newClientName}{newCampaignName && ` - ${newCampaignName}`}
+              Link: /campanha/{selectedClient?.slug}-{newCampaignName.toLowerCase().replace(/\s+/g, '-')}
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowNewClientDialog(false)}>
+              <Button variant="outline" onClick={() => setShowNewCampaignDialog(false)}>
                 Cancelar
               </Button>
               <Button onClick={createCampaign}>
@@ -444,140 +553,31 @@ const AdminPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Products Dialog */}
-      <Dialog open={showProductsDialog} onOpenChange={setShowProductsDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>Produtos - {selectedClient?.name} ({products.length})</span>
-              {products.length > 0 && (
-                <Button
-                  onClick={() => selectedClient && downloadAllImages(selectedClient.name)}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                >
-                  <Archive className="h-4 w-4" />
-                  Baixar Todas
-                </Button>
-              )}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {products.map((product) => (
-              <Card key={product.id} className="p-4">
-                <div className="space-y-3">
-                  <img
-                    src={product.imagem}
-                    alt={product.nome}
-                    className="w-full h-40 object-cover rounded"
-                  />
-                  
-                  <div>
-                    <h4 className="font-semibold">{product.nome}</h4>
-                    <div className="flex gap-2 mt-1">
-                      <span className="text-sm font-medium">{product.preco_regular}</span>
-                      {product.preco_oferta && (
-                        <Badge variant="secondary">{product.preco_oferta}</Badge>
-                      )}
-                    </div>
-                    {product.descricao && (
-                      <p className="text-sm text-muted-foreground mt-1">{product.descricao}</p>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Badge variant={product.tags.google ? "default" : "outline"}>
-                      Google: {product.tags.google ? "Sim" : "Não"}
-                    </Badge>
-                    <Badge variant={product.tags.meta ? "default" : "outline"}>
-                      Meta: {product.tags.meta ? "Sim" : "Não"}
-                    </Badge>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => downloadImage(product.imagem, product.nome)}
-                    >
-                      <Download className="h-4 w-4 mr-1" />
-                      Baixar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openTagsDialog(product)}
-                    >
-                      <Tag className="h-4 w-4 mr-1" />
-                      Tags
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => deleteProduct(product.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Tags Dialog */}
-      <Dialog open={showTagsDialog} onOpenChange={setShowTagsDialog}>
+      {/* Edit Campaign Dialog */}
+      <Dialog open={showEditCampaignDialog} onOpenChange={setShowEditCampaignDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Gerenciar Tags - {selectedProduct?.nome}</DialogTitle>
+            <DialogTitle>Editar Campanha</DialogTitle>
           </DialogHeader>
-          
-          {selectedProduct && (
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="google"
-                  checked={selectedProduct.tags.google}
-                  onCheckedChange={(checked) => {
-                    const newTags = { ...selectedProduct.tags, google: !!checked };
-                    setSelectedProduct({ ...selectedProduct, tags: newTags });
-                  }}
-                />
-                <label htmlFor="google" className="text-sm font-medium">
-                  Produto está em anúncio no Google Ads
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="meta"
-                  checked={selectedProduct.tags.meta}
-                  onCheckedChange={(checked) => {
-                    const newTags = { ...selectedProduct.tags, meta: !!checked };
-                    setSelectedProduct({ ...selectedProduct, tags: newTags });
-                  }}
-                />
-                <label htmlFor="meta" className="text-sm font-medium">
-                  Produto está em anúncio no Meta Ads
-                </label>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowTagsDialog(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={() => {
-                  updateProductTags(selectedProduct.id, selectedProduct.tags);
-                  setShowTagsDialog(false);
-                }}>
-                  Salvar Tags
-                </Button>
-              </div>
+          <div className="space-y-4">
+            <Input
+              placeholder="Nome da campanha"
+              value={newCampaignName}
+              onChange={(e) => setNewCampaignName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && updateCampaign()}
+            />
+            <div className="text-sm text-muted-foreground">
+              Link: /campanha/{selectedClient?.slug}-{newCampaignName.toLowerCase().replace(/\s+/g, '-')}
             </div>
-          )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowEditCampaignDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={updateCampaign}>
+                Atualizar Campanha
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

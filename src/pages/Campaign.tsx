@@ -6,8 +6,15 @@ import ProductForm from "@/components/ProductForm";
 import ProductGrid from "@/components/ProductGrid";
 import PhotoSuccess from "@/components/PhotoSuccess";
 import { Button } from "@/components/ui/button";
-import { Camera, Grid, ArrowLeft, Edit } from "lucide-react";
+import { Camera, Grid, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+interface Campaign {
+  id: string;
+  name: string;
+  slug: string;
+  client_id: string;
+}
 
 interface Client {
   id: string;
@@ -25,9 +32,10 @@ interface ProductData {
   data: string;
 }
 
-const ClientPage = () => {
-  const { clientSlug } = useParams();
+const CampaignPage = () => {
+  const { campaignSlug } = useParams();
   const { toast } = useToast();
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState<'welcome' | 'camera' | 'form' | 'grid' | 'success' | 'edit'>('welcome');
@@ -38,43 +46,51 @@ const ClientPage = () => {
   const [editingProduct, setEditingProduct] = useState<ProductData | null>(null);
 
   useEffect(() => {
-    if (!clientSlug) return;
+    if (!campaignSlug) return;
     
-    const fetchClient = async () => {
+    const fetchCampaign = async () => {
       try {
-        const { data, error } = await supabase
-          .from('clients')
-          .select('*')
-          .eq('slug', clientSlug)
+        const { data: campaignData, error: campaignError } = await supabase
+          .from('campaigns')
+          .select(`
+            *,
+            clients (
+              id,
+              name,
+              slug
+            )
+          `)
+          .eq('slug', campaignSlug)
           .single();
 
-        if (error) {
+        if (campaignError) {
           toast({
-            title: "Cliente não encontrado",
+            title: "Campanha não encontrada",
             description: "Verifique se o link está correto",
             variant: "destructive"
           });
           return;
         }
 
-        setClient(data);
-        loadProducts(data.id);
+        setCampaign(campaignData);
+        setClient(campaignData.clients);
+        loadProducts(campaignData.id);
       } catch (error) {
-        console.error('Erro ao buscar cliente:', error);
+        console.error('Erro ao buscar campanha:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchClient();
-  }, [clientSlug, toast]);
+    fetchCampaign();
+  }, [campaignSlug, toast]);
 
-  const loadProducts = async (clientId: string) => {
+  const loadProducts = async (campaignId: string) => {
     try {
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('client_id', clientId)
+        .eq('campaign_id', campaignId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -101,7 +117,7 @@ const ClientPage = () => {
   };
 
   const handleSaveProduct = async (productData: ProductData) => {
-    if (!client) return;
+    if (!campaign) return;
 
     try {
       if (editingProduct) {
@@ -120,7 +136,7 @@ const ClientPage = () => {
         if (error) throw error;
 
         // Recarregar produtos
-        await loadProducts(client.id);
+        await loadProducts(campaign.id);
         
         // Mostrar tela de sucesso
         setLastSaveSuccess(true);
@@ -132,7 +148,8 @@ const ClientPage = () => {
         const { error } = await supabase
           .from('products')
           .insert({
-            client_id: client.id,
+            campaign_id: campaign.id,
+            client_id: campaign.client_id,
             nome: productData.nome,
             preco_regular: productData.preco_regular,
             preco_oferta: productData.preco_oferta || null,
@@ -143,7 +160,7 @@ const ClientPage = () => {
         if (error) throw error;
 
         // Recarregar produtos
-        await loadProducts(client.id);
+        await loadProducts(campaign.id);
         
         // Mostrar tela de sucesso
         setLastSaveSuccess(true);
@@ -179,8 +196,8 @@ const ClientPage = () => {
 
       if (error) throw error;
 
-      if (client) {
-        await loadProducts(client.id);
+      if (campaign) {
+        await loadProducts(campaign.id);
       }
     } catch (error) {
       console.error('Erro ao deletar produto:', error);
@@ -188,13 +205,13 @@ const ClientPage = () => {
   };
 
   const handleClearAll = async () => {
-    if (!client) return;
+    if (!campaign) return;
 
     try {
       const { error } = await supabase
         .from('products')
         .delete()
-        .eq('client_id', client.id);
+        .eq('campaign_id', campaign.id);
 
       if (error) throw error;
 
@@ -218,7 +235,7 @@ const ClientPage = () => {
     const dataStr = JSON.stringify(products, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     
-    const exportFileDefaultName = `produtos_${client?.name.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`;
+    const exportFileDefaultName = `produtos_${campaign?.name.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`;
     
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
@@ -234,7 +251,7 @@ const ClientPage = () => {
     );
   }
 
-  if (!client) {
+  if (!campaign || !client) {
     return <Navigate to="/admin" replace />;
   }
 
@@ -244,8 +261,8 @@ const ClientPage = () => {
       <div className="p-4 border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-foreground">{client.name}</h1>
-            <p className="text-sm text-muted-foreground">Upload de Produtos</p>
+            <h1 className="text-xl font-bold text-foreground">{campaign.name}</h1>
+            <p className="text-sm text-muted-foreground">{client.name} • Upload de Produtos</p>
           </div>
           
           <div className="flex items-center gap-2">
@@ -280,9 +297,9 @@ const ClientPage = () => {
               <div className="w-24 h-24 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
                 <Camera className="w-12 h-12 text-primary" />
               </div>
-              <h2 className="text-2xl font-bold text-foreground">Bem-vindo!</h2>
+              <h2 className="text-2xl font-bold text-foreground">Bem-vindo à Campanha!</h2>
               <p className="text-muted-foreground max-w-md">
-                Tire fotos dos seus produtos e adicione as informações necessárias.
+                Tire fotos dos seus produtos e adicione as informações necessárias para esta campanha.
                 {products.length > 0 && ` Você já tem ${products.length} produto${products.length === 1 ? '' : 's'} cadastrado${products.length === 1 ? '' : 's'}.`}
               </p>
             </div>
@@ -366,4 +383,4 @@ const ClientPage = () => {
   );
 };
 
-export default ClientPage;
+export default CampaignPage;
