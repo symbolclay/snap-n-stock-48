@@ -45,11 +45,11 @@ const ProductCard = ({ product, onDelete, onEdit, onView }: ProductCardProps) =>
   return (
     <Card className="overflow-hidden bg-card/50 backdrop-blur-sm border-border hover:border-primary/50 transition-all duration-300 animate-fade-in-up group">
       {/* Image */}
-      <div className="relative overflow-hidden h-48 sm:h-56">
+      <div className="relative overflow-hidden">
         <img 
           src={product.imagem} 
           alt={product.nome}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-auto max-h-64 object-contain group-hover:scale-105 transition-transform duration-300"
         />
         
         {/* Offer Badge */}

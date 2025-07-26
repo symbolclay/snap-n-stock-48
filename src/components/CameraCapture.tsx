@@ -68,20 +68,22 @@ const CameraCapture = ({ onCapture, onClose }: CameraCaptureProps) => {
       const ctx = canvas.getContext('2d');
 
       if (ctx) {
-        // Usar resolução fixa para garantir qualidade
-        const targetWidth = 1920;
-        const targetHeight = 1080;
+        // Usar a resolução original do vídeo sem redimensionamento
+        const width = video.videoWidth;
+        const height = video.videoHeight;
         
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
+        canvas.width = width;
+        canvas.height = height;
         
-        // Configurar suavização para melhor qualidade
+        // Configurar para melhor qualidade sem redimensionamento
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
         
-        ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+        // Capturar sem redimensionar - mantém proporção original
+        ctx.drawImage(video, 0, 0, width, height);
         
-        const imageData = canvas.toDataURL('image/jpeg', 0.95);
+        // Usar qualidade máxima JPEG
+        const imageData = canvas.toDataURL('image/jpeg', 0.98);
         setHasCapture(true);
         
         // Para o stream da câmera
