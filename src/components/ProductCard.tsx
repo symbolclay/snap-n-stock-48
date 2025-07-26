@@ -45,7 +45,7 @@ const ProductCard = ({ product, onDelete, onEdit, onView }: ProductCardProps) =>
   return (
     <Card className="overflow-hidden bg-card/50 backdrop-blur-sm border-border hover:border-primary/50 transition-all duration-300 animate-fade-in-up group">
       {/* Image */}
-      <div className="aspect-square relative overflow-hidden">
+      <div className="relative overflow-hidden h-48 sm:h-56">
         <img 
           src={product.imagem} 
           alt={product.nome}
