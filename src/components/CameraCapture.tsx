@@ -30,9 +30,10 @@ const CameraCapture = ({ onCapture, onClose }: CameraCaptureProps) => {
       const constraints = {
         video: {
           facingMode: "environment", // Câmera traseira
-          width: { ideal: 4096 },
-          height: { ideal: 2160 },
-          frameRate: { ideal: 30 }
+          width: { ideal: 1920, min: 1280 },
+          height: { ideal: 1080, min: 720 },
+          frameRate: { ideal: 30 },
+          aspectRatio: { ideal: 16/9 }
         }
       };
 
@@ -67,11 +68,20 @@ const CameraCapture = ({ onCapture, onClose }: CameraCaptureProps) => {
       const ctx = canvas.getContext('2d');
 
       if (ctx) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0);
+        // Usar resolução fixa para garantir qualidade
+        const targetWidth = 1920;
+        const targetHeight = 1080;
         
-        const imageData = canvas.toDataURL('image/jpeg', 1.0);
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        
+        // Configurar suavização para melhor qualidade
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        
+        ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+        
+        const imageData = canvas.toDataURL('image/jpeg', 0.95);
         setHasCapture(true);
         
         // Para o stream da câmera

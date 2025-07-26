@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, Edit3, Eye } from "lucide-react";
+import { Trash2, Edit3, Eye, Download } from "lucide-react";
 
 interface ProductData {
   nome: string;
@@ -33,6 +33,15 @@ const ProductCard = ({ product, onDelete, onEdit, onView }: ProductCardProps) =>
     });
   };
 
+  const downloadImage = () => {
+    const link = document.createElement('a');
+    link.href = product.imagem;
+    link.download = `${product.nome.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <Card className="overflow-hidden bg-card/50 backdrop-blur-sm border-border hover:border-primary/50 transition-all duration-300 animate-fade-in-up group">
       {/* Image */}
@@ -54,6 +63,15 @@ const ProductCard = ({ product, onDelete, onEdit, onView }: ProductCardProps) =>
 
         {/* Action Buttons */}
         <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <Button
+            size="icon"
+            variant="secondary"
+            onClick={downloadImage}
+            className="w-8 h-8 bg-black/50 hover:bg-black/70 border-0"
+            title="Baixar imagem"
+          >
+            <Download className="h-4 w-4 text-white" />
+          </Button>
           {onView && (
             <Button
               size="icon"
