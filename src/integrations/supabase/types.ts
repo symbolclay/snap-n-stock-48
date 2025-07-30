@@ -52,61 +52,23 @@ export type Database = {
       clients: {
         Row: {
           created_at: string
-          gestor_id: string | null
           id: string
           name: string
           slug: string
-          ultima_foto_em: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
-          gestor_id?: string | null
           id?: string
           name: string
           slug: string
-          ultima_foto_em?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
-          gestor_id?: string | null
           id?: string
           name?: string
           slug?: string
-          ultima_foto_em?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "clients_gestor_id_fkey"
-            columns: ["gestor_id"]
-            isOneToOne: false
-            referencedRelation: "gestores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      gestores: {
-        Row: {
-          created_at: string
-          email: string | null
-          id: string
-          nome: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          email?: string | null
-          id?: string
-          nome: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          email?: string | null
-          id?: string
-          nome?: string
           updated_at?: string
         }
         Relationships: []
