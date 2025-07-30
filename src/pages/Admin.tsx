@@ -5,14 +5,26 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Users, Link2, Eye, Edit, Trash2, ExternalLink, Search, Calendar, Camera, ArrowLeft } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Users, Link2, Eye, Edit, Trash2, ExternalLink, Search, Calendar, Camera, ArrowLeft, UserCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import PhotoStatusAlert from "@/components/PhotoStatusAlert";
+
+interface Gestor {
+  id: string;
+  nome: string;
+  email?: string;
+  created_at: string;
+}
 
 interface Client {
   id: string;
   name: string;
   slug: string;
   created_at: string;
+  gestor_id?: string;
+  ultima_foto_em?: string;
+  gestor?: Gestor;
 }
 
 interface Campaign {
@@ -29,21 +41,28 @@ const AdminPage = () => {
   const { toast } = useToast();
   const [clients, setClients] = useState<Client[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [gestores, setGestores] = useState<Gestor[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [showNewClientDialog, setShowNewClientDialog] = useState(false);
   const [showNewCampaignDialog, setShowNewCampaignDialog] = useState(false);
   const [showEditCampaignDialog, setShowEditCampaignDialog] = useState(false);
+  const [showNewGestorDialog, setShowNewGestorDialog] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [newClientName, setNewClientName] = useState("");
   const [newCampaignName, setNewCampaignName] = useState("");
+  const [newGestorName, setNewGestorName] = useState("");
+  const [newGestorEmail, setNewGestorEmail] = useState("");
+  const [selectedGestorId, setSelectedGestorId] = useState("");
+  const [selectedGestorFilter, setSelectedGestorFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
-  const [currentView, setCurrentView] = useState<'clients' | 'campaigns'>('clients');
+  const [currentView, setCurrentView] = useState<'clients' | 'campaigns' | 'gestores'>('clients');
   
   useEffect(() => {
     if (isAuthenticated) {
       loadClients();
+      loadGestores();
     }
   }, [isAuthenticated]);
 
@@ -69,13 +88,30 @@ const AdminPage = () => {
     try {
       const { data, error } = await supabase
         .from('clients')
-        .select('*')
+        .select(`
+          *,
+          gestor:gestores(*)
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       setClients(data || []);
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
+    }
+  };
+
+  const loadGestores = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('gestores')
+        .select('*')
+        .order('nome', { ascending: true });
+
+      if (error) throw error;
+      setGestores(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar gestores:', error);
     }
   };
 
@@ -122,7 +158,11 @@ const AdminPage = () => {
     try {
       const { error } = await supabase
         .from('clients')
-        .insert({ name: newClientName, slug });
+        .insert({ 
+          name: newClientName, 
+          slug,
+          gestor_id: selectedGestorId || null 
+        });
 
       if (error) throw error;
 
@@ -132,6 +172,7 @@ const AdminPage = () => {
       });
 
       setNewClientName("");
+      setSelectedGestorId("");
       setShowNewClientDialog(false);
       loadClients();
     } catch (error: any) {
@@ -142,6 +183,57 @@ const AdminPage = () => {
           : "Não foi possível criar o cliente",
         variant: "destructive"
       });
+    }
+  };
+
+  const createGestor = async () => {
+    if (!newGestorName.trim()) return;
+
+    try {
+      const { error } = await supabase
+        .from('gestores')
+        .insert({ 
+          nome: newGestorName,
+          email: newGestorEmail || null
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Gestor criado!",
+        description: "Novo gestor adicionado com sucesso"
+      });
+
+      setNewGestorName("");
+      setNewGestorEmail("");
+      setShowNewGestorDialog(false);
+      loadGestores();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar o gestor",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteGestor = async (gestorId: string) => {
+    try {
+      const { error } = await supabase
+        .from('gestores')
+        .delete()
+        .eq('id', gestorId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Gestor removido",
+        description: "Gestor foi excluído com sucesso"
+      });
+
+      loadGestores();
+    } catch (error) {
+      console.error('Erro ao deletar gestor:', error);
     }
   };
 
@@ -289,13 +381,19 @@ const AdminPage = () => {
     });
   };
 
-  // Filtrar baseado na pesquisa
-  const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filtrar baseado na pesquisa e gestor
+  const filteredClients = clients.filter(client => {
+    const matchesSearch = client.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesGestor = !selectedGestorFilter || client.gestor_id === selectedGestorFilter;
+    return matchesSearch && matchesGestor;
+  });
 
   const filteredCampaigns = campaigns.filter(campaign =>
     campaign.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredGestores = gestores.filter(gestor =>
+    gestor.nome.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Tela de login
@@ -349,25 +447,56 @@ const AdminPage = () => {
             )}
             <div>
               <h1 className="text-2xl font-bold text-foreground">
-                {currentView === 'clients' ? 'Painel Administrativo' : `Campanhas - ${selectedClient?.name}`}
+                {currentView === 'clients' && 'Painel Administrativo'}
+                {currentView === 'campaigns' && `Campanhas - ${selectedClient?.name}`}
+                {currentView === 'gestores' && 'Gestores de Tráfego'}
               </h1>
               <p className="text-muted-foreground">
-                {currentView === 'clients' ? 'Gerencie clientes e campanhas' : 'Gerencie campanhas do cliente'}
+                {currentView === 'clients' && 'Gerencie clientes e campanhas'}
+                {currentView === 'campaigns' && 'Gerencie campanhas do cliente'}
+                {currentView === 'gestores' && 'Gerencie gestores de tráfego'}
               </p>
             </div>
           </div>
           
           <div className="flex gap-2">
-            {currentView === 'clients' ? (
-              <Button onClick={() => setShowNewClientDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Cliente
-              </Button>
-            ) : (
+            {currentView === 'clients' && (
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setCurrentView('gestores')}
+                  className="flex items-center gap-2"
+                >
+                  <UserCheck className="h-4 w-4" />
+                  Gestores
+                </Button>
+                <Button onClick={() => setShowNewClientDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Cliente
+                </Button>
+              </>
+            )}
+            {currentView === 'campaigns' && (
               <Button onClick={() => setShowNewCampaignDialog(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Nova Campanha
               </Button>
+            )}
+            {currentView === 'gestores' && (
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setCurrentView('clients')}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Voltar
+                </Button>
+                <Button onClick={() => setShowNewGestorDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Gestor
+                </Button>
+              </>
             )}
             <Button variant="outline" onClick={() => setIsAuthenticated(false)}>
               Sair
@@ -376,17 +505,35 @@ const AdminPage = () => {
         </div>
       </div>
 
-      {/* Search Bar */}
+      {/* Search Bar and Filters */}
       <div className="p-6 pb-3">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder={currentView === 'clients' ? "Pesquisar cliente..." : "Pesquisar campanha..."}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder={currentView === 'clients' ? "Pesquisar cliente..." : currentView === 'gestores' ? "Pesquisar gestor..." : "Pesquisar campanha..."}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          {currentView === 'clients' && gestores.length > 0 && (
+            <Select value={selectedGestorFilter} onValueChange={setSelectedGestorFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filtrar por gestor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todos os gestores</SelectItem>
+                {gestores.map((gestor) => (
+                  <SelectItem key={gestor.id} value={gestor.id}>
+                    {gestor.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 
@@ -402,6 +549,17 @@ const AdminPage = () => {
                     <h3 className="text-lg font-semibold">{client.name}</h3>
                     <Users className="h-5 w-5 text-muted-foreground" />
                   </div>
+                  
+                  {client.gestor && (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        <UserCheck className="h-3 w-3 mr-1" />
+                        {client.gestor.nome}
+                      </Badge>
+                    </div>
+                  )}
+                  
+                  <PhotoStatusAlert ultimaFoto={client.ultima_foto_em} />
                   
                   <p className="text-sm text-muted-foreground">
                     Criado em {new Date(client.created_at).toLocaleDateString('pt-BR')}
@@ -426,6 +584,44 @@ const AdminPage = () => {
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
                       Excluir Cliente
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))
+          ) : currentView === 'gestores' ? (
+            // Gestores View
+            filteredGestores.map((gestor) => (
+              <Card key={gestor.id} className="p-6 hover:shadow-lg transition-shadow">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">{gestor.nome}</h3>
+                    <UserCheck className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  
+                  {gestor.email && (
+                    <p className="text-sm text-muted-foreground">{gestor.email}</p>
+                  )}
+                  
+                  <p className="text-sm text-muted-foreground">
+                    Criado em {new Date(gestor.created_at).toLocaleDateString('pt-BR')}
+                  </p>
+                  
+                  <div className="text-sm">
+                    <Badge variant="secondary">
+                      {clients.filter(c => c.gestor_id === gestor.id).length} clientes
+                    </Badge>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => deleteGestor(gestor.id)}
+                      className="justify-start"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir Gestor
                     </Button>
                   </div>
                 </div>
@@ -513,6 +709,26 @@ const AdminPage = () => {
               onChange={(e) => setNewClientName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && createClient()}
             />
+            
+            {gestores.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Gestor responsável</label>
+                <Select value={selectedGestorId} onValueChange={setSelectedGestorId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um gestor (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Sem gestor</SelectItem>
+                    {gestores.map((gestor) => (
+                      <SelectItem key={gestor.id} value={gestor.id}>
+                        {gestor.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowNewClientDialog(false)}>
                 Cancelar
@@ -575,6 +791,38 @@ const AdminPage = () => {
               </Button>
               <Button onClick={updateCampaign}>
                 Atualizar Campanha
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Gestor Dialog */}
+      <Dialog open={showNewGestorDialog} onOpenChange={setShowNewGestorDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar Novo Gestor</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Nome do gestor"
+              value={newGestorName}
+              onChange={(e) => setNewGestorName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && createGestor()}
+            />
+            <Input
+              placeholder="Email (opcional)"
+              type="email"
+              value={newGestorEmail}
+              onChange={(e) => setNewGestorEmail(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && createGestor()}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowNewGestorDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={createGestor}>
+                Criar Gestor
               </Button>
             </div>
           </div>
