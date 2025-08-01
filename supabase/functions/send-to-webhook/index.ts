@@ -47,7 +47,19 @@ serve(async (req) => {
     })
 
     if (!webhookResponse.ok) {
-      throw new Error(`Webhook retornou status ${webhookResponse.status}`)
+      const errorText = await webhookResponse.text()
+      console.error(`Webhook erro ${webhookResponse.status}:`, errorText)
+      
+      let errorMessage = `Webhook retornou status ${webhookResponse.status}`
+      if (webhookResponse.status === 404) {
+        errorMessage = 'URL do webhook não encontrada (404). Verifique se o URL está correto no cadastro do cliente.'
+      } else if (webhookResponse.status === 401 || webhookResponse.status === 403) {
+        errorMessage = 'Acesso negado ao webhook. Verifique as permissões.'
+      } else if (webhookResponse.status >= 500) {
+        errorMessage = 'Erro interno no servidor do webhook. Tente novamente mais tarde.'
+      }
+      
+      throw new Error(errorMessage)
     }
 
     const result = await webhookResponse.text()
