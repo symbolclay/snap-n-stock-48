@@ -1,7 +1,9 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, Edit3, Eye, Download } from "lucide-react";
+import { Trash2, Edit3, Eye, Download, Send } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProductData {
   nome: string;
@@ -14,12 +16,14 @@ interface ProductData {
 
 interface ProductCardProps {
   product: ProductData;
+  clientId?: string;
   onDelete?: () => void;
   onEdit?: () => void;
   onView?: () => void;
 }
 
-const ProductCard = ({ product, onDelete, onEdit, onView }: ProductCardProps) => {
+const ProductCard = ({ product, clientId, onDelete, onEdit, onView }: ProductCardProps) => {
+  const { toast } = useToast();
   const hasOffer = product.preco_oferta && product.preco_oferta !== product.preco_regular;
   
   const formatDate = (dateString: string) => {
@@ -40,6 +44,60 @@ const ProductCard = ({ product, onDelete, onEdit, onView }: ProductCardProps) =>
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const sendToWebhook = async () => {
+    if (!clientId) {
+      toast({
+        title: "Erro",
+        description: "ID do cliente não encontrado",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Get client webhook URL
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select('webhook_url')
+        .eq('id', clientId)
+        .single();
+
+      if (clientError) throw clientError;
+
+      if (!clientData?.webhook_url) {
+        toast({
+          title: "Webhook não configurado",
+          description: "Configure o webhook do cliente no painel administrativo",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Send to webhook via edge function
+      const { data, error } = await supabase.functions.invoke('send-to-webhook', {
+        body: {
+          webhookUrl: clientData.webhook_url,
+          productData: product
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Enviado com sucesso!",
+        description: "Produto enviado para grupo de oferta",
+      });
+
+    } catch (error: any) {
+      console.error('Erro ao enviar para webhook:', error);
+      toast({
+        title: "Erro ao enviar",
+        description: error.message || "Não foi possível enviar o produto",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -154,6 +212,20 @@ const ProductCard = ({ product, onDelete, onEdit, onView }: ProductCardProps) =>
             Cadastrado em {formatDate(product.data)}
           </p>
         </div>
+
+        {/* Webhook Button */}
+        {clientId && (
+          <div className="pt-2">
+            <Button 
+              onClick={sendToWebhook}
+              className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium"
+              size="sm"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Enviar para Grupo de Oferta
+            </Button>
+          </div>
+        )}
       </div>
     </Card>
   );

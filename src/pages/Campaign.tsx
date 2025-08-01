@@ -363,6 +363,7 @@ const CampaignPage = () => {
         {currentView === 'grid' && (
           <ProductGrid
             products={products}
+            clientId={client?.id}
             onDeleteProduct={handleDeleteProduct}
             onClearAll={handleClearAll}
             onExport={handleExport}

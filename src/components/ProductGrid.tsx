@@ -18,13 +18,14 @@ interface ProductData {
 
 interface ProductGridProps {
   products: ProductData[];
+  clientId?: string;
   onDeleteProduct: (id: string) => void;
   onClearAll: () => void;
   onExport: () => void;
   onEditProduct?: (product: ProductData) => void;
 }
 
-const ProductGrid = ({ products, onDeleteProduct, onClearAll, onExport, onEditProduct }: ProductGridProps) => {
+const ProductGrid = ({ products, clientId, onDeleteProduct, onClearAll, onExport, onEditProduct }: ProductGridProps) => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -132,6 +133,7 @@ const ProductGrid = ({ products, onDeleteProduct, onClearAll, onExport, onEditPr
           >
             <ProductCard
               product={product}
+              clientId={clientId}
               onDelete={() => handleDeleteProduct(product.id)}
               onEdit={onEditProduct ? () => onEditProduct(product) : undefined}
               onView={() => {

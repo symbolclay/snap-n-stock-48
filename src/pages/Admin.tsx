@@ -12,6 +12,7 @@ interface Client {
   id: string;
   name: string;
   slug: string;
+  webhook_url?: string;
   created_at: string;
 }
 
@@ -31,10 +32,13 @@ const AdminPage = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [showNewClientDialog, setShowNewClientDialog] = useState(false);
+  const [showEditClientDialog, setShowEditClientDialog] = useState(false);
   const [showNewCampaignDialog, setShowNewCampaignDialog] = useState(false);
   const [showEditCampaignDialog, setShowEditCampaignDialog] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [newClientName, setNewClientName] = useState("");
+  const [newClientWebhook, setNewClientWebhook] = useState("");
   const [newCampaignName, setNewCampaignName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -122,7 +126,11 @@ const AdminPage = () => {
     try {
       const { error } = await supabase
         .from('clients')
-        .insert({ name: newClientName, slug });
+        .insert({ 
+          name: newClientName, 
+          slug,
+          webhook_url: newClientWebhook || null
+        });
 
       if (error) throw error;
 
@@ -132,6 +140,7 @@ const AdminPage = () => {
       });
 
       setNewClientName("");
+      setNewClientWebhook("");
       setShowNewClientDialog(false);
       loadClients();
     } catch (error: any) {
@@ -140,6 +149,48 @@ const AdminPage = () => {
         description: error.message.includes('duplicate') 
           ? "Já existe um cliente com esse nome" 
           : "Não foi possível criar o cliente",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateClient = async () => {
+    if (!newClientName.trim() || !editingClient) return;
+
+    const slug = newClientName
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9\s]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({ 
+          name: newClientName,
+          slug,
+          webhook_url: newClientWebhook || null
+        })
+        .eq('id', editingClient.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Cliente atualizado!",
+        description: "Cliente foi editado com sucesso"
+      });
+
+      setNewClientName("");
+      setNewClientWebhook("");
+      setEditingClient(null);
+      setShowEditClientDialog(false);
+      loadClients();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o cliente",
         variant: "destructive"
       });
     }
@@ -278,6 +329,13 @@ const AdminPage = () => {
     setEditingCampaign(campaign);
     setNewCampaignName(campaign.name);
     setShowEditCampaignDialog(true);
+  };
+
+  const editClient = (client: Client) => {
+    setEditingClient(client);
+    setNewClientName(client.name);
+    setNewClientWebhook(client.webhook_url || "");
+    setShowEditClientDialog(true);
   };
 
   const copyCampaignLink = (slug: string) => {
@@ -419,6 +477,16 @@ const AdminPage = () => {
                     </Button>
                     
                     <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => editClient(client)}
+                      className="justify-start"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar Cliente
+                    </Button>
+                    
+                    <Button
                       variant="destructive"
                       size="sm"
                       onClick={() => deleteClient(client.id)}
@@ -513,12 +581,55 @@ const AdminPage = () => {
               onChange={(e) => setNewClientName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && createClient()}
             />
+            <Input
+              placeholder="URL do Webhook N8N (opcional)"
+              value={newClientWebhook}
+              onChange={(e) => setNewClientWebhook(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && createClient()}
+            />
+            <div className="text-xs text-muted-foreground">
+              O webhook será usado para enviar produtos para grupos de oferta
+            </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowNewClientDialog(false)}>
                 Cancelar
               </Button>
               <Button onClick={createClient}>
                 Criar Cliente
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Client Dialog */}
+      <Dialog open={showEditClientDialog} onOpenChange={setShowEditClientDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Cliente</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Nome do cliente"
+              value={newClientName}
+              onChange={(e) => setNewClientName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && updateClient()}
+            />
+            <Input
+              placeholder="URL do Webhook N8N (opcional)"
+              value={newClientWebhook}
+              onChange={(e) => setNewClientWebhook(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && updateClient()}
+            />
+            <div className="text-xs text-muted-foreground">
+              O webhook será usado para enviar produtos para grupos de oferta
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowEditClientDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={updateClient}>
+                Atualizar Cliente
               </Button>
             </div>
           </div>
