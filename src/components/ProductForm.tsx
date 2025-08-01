@@ -4,8 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X, Save, Package, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ImageEditor } from "./ImageEditor";
 
 interface ProductData {
   nome: string;
@@ -14,6 +16,7 @@ interface ProductData {
   descricao: string;
   imagem: string;
   data: string;
+  categoria?: string;
 }
 
 interface ProductFormProps {
@@ -30,10 +33,13 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
     nome: productData?.nome || "",
     preco_regular: productData?.preco_regular || "",
     preco_oferta: productData?.preco_oferta || "",
-    descricao: productData?.descricao || ""
+    descricao: productData?.descricao || "",
+    categoria: productData?.categoria || "CATEGORIA"
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [imageFormat, setImageFormat] = useState<'mobile' | 'web'>('mobile');
+  const [editedImage, setEditedImage] = useState<string>("");
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -90,7 +96,7 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
     try {
       const productData: ProductData = {
         ...formData,
-        imagem: imageData,
+        imagem: editedImage || imageData, // Usa a imagem editada se disponível
         data: new Date().toISOString()
       };
 
@@ -164,6 +170,34 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
           </div>
         </Card>
 
+        {/* Editor de Imagem */}
+        <Card className="p-4 animate-fade-in-up">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-foreground font-medium">Imagem do Feed</Label>
+              <Select value={imageFormat} onValueChange={(value: 'mobile' | 'web') => setImageFormat(value)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mobile">Mobile (9:16)</SelectItem>
+                  <SelectItem value="web">Web (4:5)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <ImageEditor
+              originalImage={imageData}
+              productName={formData.nome}
+              category={formData.categoria}
+              regularPrice={formData.preco_regular.replace(/[^\d,]/g, '').replace(',', '.')}
+              offerPrice={formData.preco_oferta ? formData.preco_oferta.replace(/[^\d,]/g, '').replace(',', '.') : undefined}
+              onImageGenerated={setEditedImage}
+              format={imageFormat}
+            />
+          </div>
+        </Card>
+
         {/* Form */}
         <div className="space-y-4 animate-fade-in-up pb-6" style={{ animationDelay: '0.1s' }}>
           {/* Nome do Produto */}
@@ -176,6 +210,21 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
               value={formData.nome}
               onChange={(e) => handleInputChange('nome', e.target.value)}
               placeholder="Ex: Café Premium Torrado"
+              className="bg-secondary/50 border-border focus:border-primary transition-colors"
+              disabled={isLoading}
+            />
+          </div>
+
+          {/* Categoria */}
+          <div className="space-y-2">
+            <Label htmlFor="categoria" className="text-foreground font-medium">
+              Categoria
+            </Label>
+            <Input
+              id="categoria"
+              value={formData.categoria}
+              onChange={(e) => handleInputChange('categoria', e.target.value)}
+              placeholder="Ex: MEDICAMENTO, SUPLEMENTO..."
               className="bg-secondary/50 border-border focus:border-primary transition-colors"
               disabled={isLoading}
             />
