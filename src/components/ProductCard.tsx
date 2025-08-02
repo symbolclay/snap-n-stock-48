@@ -1,9 +1,11 @@
+import React, { useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, Edit3, Eye, Download, Send } from "lucide-react";
+import { Trash2, Edit3, Eye, Download, Send, Image } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ImageEditor } from "./ImageEditor";
 
 interface ProductData {
   nome: string;
@@ -26,6 +28,7 @@ interface ProductCardProps {
 const ProductCard = ({ product, clientId, onDelete, onEdit, onView }: ProductCardProps) => {
   const { toast } = useToast();
   const hasOffer = product.preco_oferta && product.preco_oferta !== product.preco_regular;
+  const [editedImage, setEditedImage] = useState<string>('');
   
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -38,10 +41,132 @@ const ProductCard = ({ product, clientId, onDelete, onEdit, onView }: ProductCar
     });
   };
 
-  const downloadImage = () => {
+  // Generate edited image for WhatsApp format
+  const generateEditedImageForWhatsApp = (): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return resolve('');
+
+      canvas.width = 1080;
+      canvas.height = 1350;
+
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      
+      img.onload = () => {
+        // Cover the entire canvas
+        const imgAspect = img.width / img.height;
+        const canvasAspect = canvas.width / canvas.height;
+        
+        let drawWidth, drawHeight, drawX, drawY;
+        
+        if (imgAspect > canvasAspect) {
+          drawHeight = canvas.height;
+          drawWidth = drawHeight * imgAspect;
+          drawX = (canvas.width - drawWidth) / 2;
+          drawY = 0;
+        } else {
+          drawWidth = canvas.width;
+          drawHeight = drawWidth / imgAspect;
+          drawX = 0;
+          drawY = (canvas.height - drawHeight) / 2;
+        }
+
+        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+        
+        // Add text overlays
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const drawTextWithBackground = (
+          text: string, x: number, y: number, width: number, height: number, 
+          bgColor: string, textColor: string, fontSize: number
+        ) => {
+          const radius = 15;
+          ctx.fillStyle = bgColor;
+          ctx.beginPath();
+          ctx.roundRect(x - width/2, y - height/2, width, height, radius);
+          ctx.fill();
+          
+          ctx.fillStyle = textColor;
+          ctx.font = `bold ${fontSize}px "Arial Black", Arial, sans-serif`;
+          ctx.fillText(text, x, y);
+        };
+
+        // Product name
+        drawTextWithBackground(
+          product.nome.toUpperCase(),
+          canvas.width / 2, 120,
+          canvas.width * 0.85, 100,
+          '#FFD700', '#000000', 48
+        );
+
+        // Category
+        drawTextWithBackground(
+          product.categoria.toUpperCase(),
+          canvas.width / 2, 230,
+          canvas.width * 0.7, 80,
+          '#DC2626', '#FFFFFF', 36
+        );
+
+        // Price
+        const priceText = hasOffer ? `POR R$ ${product.preco_oferta}` : `POR R$ ${product.preco_regular}`;
+        drawTextWithBackground(
+          priceText,
+          canvas.width / 2, canvas.height - 120,
+          canvas.width * 0.9, 110,
+          '#16A34A', '#FFFFFF', 52
+        );
+
+        // Old price if on offer
+        if (hasOffer) {
+          const oldPriceY = canvas.height - 200;
+          const oldPriceText = `De R$ ${product.preco_regular}`;
+          
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          ctx.beginPath();
+          ctx.roundRect(canvas.width / 2 - 200, oldPriceY - 30, 400, 60, 10);
+          ctx.fill();
+          
+          ctx.fillStyle = '#CCCCCC';
+          ctx.font = 'bold 32px Arial';
+          ctx.fillText(oldPriceText, canvas.width / 2, oldPriceY);
+          
+          const textMetrics = ctx.measureText(oldPriceText);
+          ctx.strokeStyle = '#FF4444';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(canvas.width / 2 - textMetrics.width / 2, oldPriceY);
+          ctx.lineTo(canvas.width / 2 + textMetrics.width / 2, oldPriceY);
+          ctx.stroke();
+        }
+
+        const editedImageData = canvas.toDataURL('image/jpeg', 0.9);
+        setEditedImage(editedImageData);
+        resolve(editedImageData);
+      };
+
+      img.src = product.imagem;
+    });
+  };
+
+  const downloadOriginalImage = () => {
     const link = document.createElement('a');
     link.href = product.imagem;
-    link.download = `${product.nome.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.jpg`;
+    link.download = `${product.nome.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_original.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const downloadEditedImage = async () => {
+    if (!editedImage) {
+      await generateEditedImageForWhatsApp();
+    }
+    const link = document.createElement('a');
+    link.href = editedImage;
+    link.download = `${product.nome.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_editada.jpg`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -76,14 +201,17 @@ const ProductCard = ({ product, clientId, onDelete, onEdit, onView }: ProductCar
         return;
       }
 
-      // Send to webhook via edge function - send the image data from product.imagem
+      // Generate edited image for WhatsApp
+      const editedImageData = await generateEditedImageForWhatsApp();
+      
+      // Send to webhook via edge function - send the edited image
       const { data, error } = await supabase.functions.invoke('send-to-webhook', {
         body: {
           webhookUrl: clientData.webhook_url,
           productData: {
             ...product,
-            // Ensure we're sending the edited image
-            imagem: product.imagem
+            // Send the edited image instead of the original
+            imagem: editedImageData
           }
         }
       });
@@ -129,11 +257,20 @@ const ProductCard = ({ product, clientId, onDelete, onEdit, onView }: ProductCar
           <Button
             size="icon"
             variant="secondary"
-            onClick={downloadImage}
+            onClick={downloadOriginalImage}
             className="w-8 h-8 bg-black/50 hover:bg-black/70 border-0"
-            title="Baixar imagem"
+            title="Baixar original"
           >
             <Download className="h-4 w-4 text-white" />
+          </Button>
+          <Button
+            size="icon"
+            variant="secondary"
+            onClick={downloadEditedImage}
+            className="w-8 h-8 bg-black/50 hover:bg-black/70 border-0"
+            title="Baixar editada"
+          >
+            <Image className="h-4 w-4 text-white" />
           </Button>
           {onView && (
             <Button
