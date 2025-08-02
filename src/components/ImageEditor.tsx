@@ -106,38 +106,34 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
     img.crossOrigin = 'anonymous';
     
     img.onload = () => {
-      // Limpar canvas
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Calcular dimensões da imagem para centralizar
+      // Calcular dimensões para cobrir todo o canvas (sem espaços em branco)
       const imgAspect = img.width / img.height;
       const canvasAspect = canvas.width / canvas.height;
       
       let drawWidth, drawHeight, drawX, drawY;
       
       if (imgAspect > canvasAspect) {
-        // Imagem é mais larga
-        drawHeight = canvas.height * 0.6; // 60% da altura do canvas
+        // Imagem é mais larga - usar altura total
+        drawHeight = canvas.height;
         drawWidth = drawHeight * imgAspect;
         drawX = (canvas.width - drawWidth) / 2;
-        drawY = canvas.height * 0.2; // 20% do topo
+        drawY = 0;
       } else {
-        // Imagem é mais alta
-        drawWidth = canvas.width * 0.8; // 80% da largura do canvas
+        // Imagem é mais alta - usar largura total
+        drawWidth = canvas.width;
         drawHeight = drawWidth / imgAspect;
-        drawX = (canvas.width - drawWidth) / 2;
-        drawY = canvas.height * 0.2; // 20% do topo
+        drawX = 0;
+        drawY = (canvas.height - drawHeight) / 2;
       }
 
-      // Desenhar imagem do produto
+      // Desenhar imagem de fundo cobrindo todo o canvas
       ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
 
       // Configurações de texto
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      // Função para desenhar texto com fundo
+      // Função para desenhar texto com fundo arredondado
       const drawTextWithBackground = (
         text: string, 
         x: number, 
@@ -148,52 +144,58 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
         textColor: string, 
         fontSize: number
       ) => {
-        // Fundo
+        const radius = 15;
+        
+        // Fundo arredondado
         ctx.fillStyle = bgColor;
-        ctx.fillRect(x - width/2, y - height/2, width, height);
+        ctx.beginPath();
+        ctx.roundRect(x - width/2, y - height/2, width, height, radius);
+        ctx.fill();
         
         // Texto
         ctx.fillStyle = textColor;
-        ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+        ctx.font = `bold ${fontSize}px "Arial Black", Arial, sans-serif`;
         ctx.fillText(text, x, y);
       };
 
       // Nome do produto (topo)
-      const productTextWidth = canvas.width * 0.7;
-      const productTextHeight = 100;
+      const productTextWidth = canvas.width * 0.85;
+      const productTextHeight = format === 'mobile' ? 120 : 100;
+      const productY = format === 'mobile' ? 150 : 120;
       drawTextWithBackground(
         productName.toUpperCase(),
         canvas.width / 2,
-        120,
+        productY,
         productTextWidth,
         productTextHeight,
         colorTheme.productBg,
         colorTheme.productText,
-        48
+        format === 'mobile' ? 56 : 48
       );
 
       // Categoria
-      const categoryTextWidth = canvas.width * 0.6;
-      const categoryTextHeight = 80;
+      const categoryTextWidth = canvas.width * 0.7;
+      const categoryTextHeight = format === 'mobile' ? 100 : 80;
+      const categoryY = format === 'mobile' ? 300 : 230;
       drawTextWithBackground(
         category.toUpperCase(),
         canvas.width / 2,
-        220,
+        categoryY,
         categoryTextWidth,
         categoryTextHeight,
         colorTheme.categoryBg,
         colorTheme.categoryText,
-        36
+        format === 'mobile' ? 44 : 36
       );
 
       // Preço (parte inferior)
-      const priceY = canvas.height - 120;
+      const priceY = format === 'mobile' ? canvas.height - 150 : canvas.height - 120;
       const priceText = offerPrice 
         ? `POR R$ ${offerPrice}` 
         : `POR R$ ${regularPrice}`;
       
-      const priceTextWidth = canvas.width * 0.8;
-      const priceTextHeight = 100;
+      const priceTextWidth = canvas.width * 0.9;
+      const priceTextHeight = format === 'mobile' ? 130 : 110;
       drawTextWithBackground(
         priceText,
         canvas.width / 2,
@@ -202,16 +204,29 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
         priceTextHeight,
         colorTheme.priceBg,
         colorTheme.priceText,
-        52
+        format === 'mobile' ? 60 : 52
       );
 
-      // Se tem preço de oferta, mostrar preço riscado
+      // Se tem preço de oferta, mostrar preço riscado acima
       if (offerPrice) {
-        ctx.fillStyle = '#666666';
-        ctx.font = '32px Arial';
+        const oldPriceY = priceY - (format === 'mobile' ? 100 : 80);
         const oldPriceText = `De R$ ${regularPrice}`;
-        const oldPriceY = priceY - 80;
         
+        // Fundo semi-transparente para o preço antigo
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.beginPath();
+        ctx.roundRect(
+          canvas.width / 2 - 200, 
+          oldPriceY - 30, 
+          400, 
+          60, 
+          10
+        );
+        ctx.fill();
+        
+        // Texto do preço antigo
+        ctx.fillStyle = '#CCCCCC';
+        ctx.font = `bold ${format === 'mobile' ? 36 : 32}px Arial`;
         ctx.fillText(oldPriceText, canvas.width / 2, oldPriceY);
         
         // Linha riscando o preço antigo
@@ -220,8 +235,8 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
         const lineStartX = canvas.width / 2 - textMetrics.width / 2;
         const lineEndX = canvas.width / 2 + textMetrics.width / 2;
         
-        ctx.strokeStyle = '#666666';
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#FF4444';
+        ctx.lineWidth = 4;
         ctx.beginPath();
         ctx.moveTo(lineStartX, lineY);
         ctx.lineTo(lineEndX, lineY);

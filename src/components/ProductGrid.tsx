@@ -14,6 +14,7 @@ interface ProductData {
   descricao: string;
   imagem: string;
   data: string;
+  categoria: string;
 }
 
 interface ProductGridProps {

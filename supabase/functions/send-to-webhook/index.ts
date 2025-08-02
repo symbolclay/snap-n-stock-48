@@ -30,7 +30,8 @@ serve(async (req) => {
       preco_regular: productData.preco_regular,
       preco_oferta: productData.preco_oferta,
       descricao: productData.descricao,
-      imagem: productData.imagem,
+      categoria: productData.categoria,
+      imagem: productData.imagem, // This should be the edited image
       timestamp: new Date().toISOString()
     }
 

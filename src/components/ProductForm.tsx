@@ -16,7 +16,7 @@ interface ProductData {
   descricao: string;
   imagem: string;
   data: string;
-  categoria?: string;
+  categoria: string;
 }
 
 interface ProductFormProps {

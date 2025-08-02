@@ -12,6 +12,7 @@ interface ProductData {
   descricao: string;
   imagem: string;
   data: string;
+  categoria: string;
 }
 
 interface ProductCardProps {
@@ -75,11 +76,15 @@ const ProductCard = ({ product, clientId, onDelete, onEdit, onView }: ProductCar
         return;
       }
 
-      // Send to webhook via edge function
+      // Send to webhook via edge function - send the image data from product.imagem
       const { data, error } = await supabase.functions.invoke('send-to-webhook', {
         body: {
           webhookUrl: clientData.webhook_url,
-          productData: product
+          productData: {
+            ...product,
+            // Ensure we're sending the edited image
+            imagem: product.imagem
+          }
         }
       });
 

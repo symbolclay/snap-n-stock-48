@@ -30,6 +30,7 @@ interface ProductData {
   descricao: string;
   imagem: string;
   data: string;
+  categoria: string;
 }
 
 const CampaignPage = () => {
@@ -102,7 +103,8 @@ const CampaignPage = () => {
         preco_oferta: product.preco_oferta || "",
         descricao: product.descricao || "",
         imagem: product.imagem,
-        data: product.created_at
+        data: product.created_at,
+        categoria: product.categoria || "CATEGORIA"
       }));
 
       setProducts(formattedProducts);
@@ -129,7 +131,8 @@ const CampaignPage = () => {
             preco_regular: productData.preco_regular,
             preco_oferta: productData.preco_oferta || null,
             descricao: productData.descricao || null,
-            imagem: productData.imagem
+            imagem: productData.imagem,
+            categoria: productData.categoria
           })
           .eq('id', editingProduct.id);
 
@@ -154,7 +157,8 @@ const CampaignPage = () => {
             preco_regular: productData.preco_regular,
             preco_oferta: productData.preco_oferta || null,
             descricao: productData.descricao || null,
-            imagem: productData.imagem
+            imagem: productData.imagem,
+            categoria: productData.categoria
           });
 
         if (error) throw error;
