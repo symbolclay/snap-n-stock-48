@@ -94,7 +94,7 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
     setIsLoading(true);
 
     try {
-      const productData: ProductData = {
+      const productDataToSave: ProductData = {
         ...formData,
         imagem: imageData, // Sempre usar a imagem original
         data: new Date().toISOString()
@@ -103,7 +103,7 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
       // Simula processamento
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      onSave(productData);
+      onSave(productDataToSave);
 
       toast({
         title: "Produto salvo!",

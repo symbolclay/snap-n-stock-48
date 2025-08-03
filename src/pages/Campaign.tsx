@@ -5,6 +5,7 @@ import CameraCapture from "@/components/CameraCapture";
 import ProductForm from "@/components/ProductForm";
 import ProductGrid from "@/components/ProductGrid";
 import PhotoSuccess from "@/components/PhotoSuccess";
+import SharePreview from "@/components/SharePreview";
 import { Button } from "@/components/ui/button";
 import { Camera, Grid, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -39,7 +40,8 @@ const CampaignPage = () => {
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<'welcome' | 'camera' | 'form' | 'grid' | 'success' | 'edit'>('welcome');
+  const [currentView, setCurrentView] = useState<'welcome' | 'camera' | 'form' | 'grid' | 'success' | 'edit' | 'share'>('welcome');
+  const [savedProduct, setSavedProduct] = useState<ProductData | null>(null);
   const [capturedImage, setCapturedImage] = useState<string>("");
   const [products, setProducts] = useState<ProductData[]>([]);
   const [lastSaveSuccess, setLastSaveSuccess] = useState(false);
@@ -166,10 +168,9 @@ const CampaignPage = () => {
         // Recarregar produtos
         await loadProducts(campaign.id);
         
-        // Mostrar tela de sucesso
-        setLastSaveSuccess(true);
-        setLastSaveMessage("Sua foto foi enviada com sucesso!");
-        setCurrentView('success');
+        // Salvar produto para tela de compartilhamento
+        setSavedProduct(productData);
+        setCurrentView('share');
       }
       
       setCapturedImage("");
@@ -381,6 +382,14 @@ const CampaignPage = () => {
             message={lastSaveMessage}
             onContinue={handleContinuePhotos}
             onFinish={handleFinishPhotos}
+          />
+        )}
+
+        {currentView === 'share' && savedProduct && (
+          <SharePreview
+            productData={savedProduct}
+            onBack={() => setCurrentView('welcome')}
+            onContinue={() => setCurrentView('welcome')}
           />
         )}
       </div>
