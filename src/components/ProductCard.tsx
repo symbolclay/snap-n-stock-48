@@ -6,6 +6,17 @@ import { Trash2, Edit3, Eye, Download, Send, Image } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ImageEditor } from "./ImageEditor";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface ProductData {
   nome: string;
@@ -347,17 +358,35 @@ const ProductCard = ({ product, clientId, onDelete, onEdit, onView }: ProductCar
           </p>
         </div>
 
-        {/* Webhook Button */}
+        {/* Webhook Button with Confirmation */}
         {clientId && (
           <div className="pt-2">
-            <Button 
-              onClick={sendToWebhook}
-              className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium"
-              size="sm"
-            >
-              <Send className="h-4 w-4 mr-2" />
-              Enviar para Grupo de Oferta
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium"
+                  size="sm"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Enviar para Grupo de Oferta
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirmar envio</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tem certeza que deseja enviar o produto "{product.nome}" para o grupo de oferta? 
+                    A imagem será enviada no formato editado para WhatsApp.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={sendToWebhook}>
+                    Sim, enviar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )}
       </div>
