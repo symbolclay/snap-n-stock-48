@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 interface ImageEditorProps {
   originalImage: string;
   productName: string;
-  category: string;
   regularPrice: string;
   offerPrice?: string;
   onImageGenerated: (editedImage: string) => void;
@@ -16,8 +15,6 @@ interface ImageEditorProps {
 interface ColorTheme {
   productBg: string;
   productText: string;
-  categoryBg: string;
-  categoryText: string;
   priceBg: string;
   priceText: string;
 }
@@ -25,8 +22,6 @@ interface ColorTheme {
 const defaultTheme: ColorTheme = {
   productBg: '#FFD700',
   productText: '#000000',
-  categoryBg: '#DC2626',
-  categoryText: '#FFFFFF',
   priceBg: '#16A34A',
   priceText: '#FFFFFF',
 };
@@ -41,8 +36,6 @@ const colorPresets = [
     theme: {
       productBg: '#3B82F6',
       productText: '#FFFFFF',
-      categoryBg: '#1E40AF',
-      categoryText: '#FFFFFF',
       priceBg: '#059669',
       priceText: '#FFFFFF',
     }
@@ -52,8 +45,6 @@ const colorPresets = [
     theme: {
       productBg: '#8B5CF6',
       productText: '#FFFFFF',
-      categoryBg: '#7C3AED',
-      categoryText: '#FFFFFF',
       priceBg: '#059669',
       priceText: '#FFFFFF',
     }
@@ -63,8 +54,6 @@ const colorPresets = [
     theme: {
       productBg: '#F97316',
       productText: '#FFFFFF',
-      categoryBg: '#EA580C',
-      categoryText: '#FFFFFF',
       priceBg: '#059669',
       priceText: '#FFFFFF',
     }
@@ -74,7 +63,6 @@ const colorPresets = [
 export const ImageEditor: React.FC<ImageEditorProps> = ({
   originalImage,
   productName,
-  category,
   regularPrice,
   offerPrice,
   onImageGenerated,
@@ -173,20 +161,6 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
         format === 'mobile' ? 56 : 48
       );
 
-      // Categoria
-      const categoryTextWidth = canvas.width * 0.7;
-      const categoryTextHeight = format === 'mobile' ? 100 : 80;
-      const categoryY = format === 'mobile' ? 300 : 230;
-      drawTextWithBackground(
-        category.toUpperCase(),
-        canvas.width / 2,
-        categoryY,
-        categoryTextWidth,
-        categoryTextHeight,
-        colorTheme.categoryBg,
-        colorTheme.categoryText,
-        format === 'mobile' ? 44 : 36
-      );
 
       // Preço (parte inferior)
       const priceY = format === 'mobile' ? canvas.height - 150 : canvas.height - 120;
@@ -254,7 +228,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
 
   useEffect(() => {
     generateEditedImage();
-  }, [originalImage, productName, category, regularPrice, offerPrice, colorTheme, format]);
+  }, [originalImage, productName, regularPrice, offerPrice, colorTheme, format]);
 
   return (
     <div className="space-y-4">
@@ -273,7 +247,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
       </div>
 
       <Card className="p-4">
-        <div className="grid grid-cols-3 gap-4 text-sm">
+        <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <Label>Produto</Label>
             <div 
@@ -284,19 +258,6 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
               }}
             >
               {productName.substring(0, 15)}...
-            </div>
-          </div>
-          
-          <div>
-            <Label>Categoria</Label>
-            <div 
-              className="w-full h-8 rounded border flex items-center justify-center text-xs font-bold"
-              style={{ 
-                backgroundColor: colorTheme.categoryBg, 
-                color: colorTheme.categoryText 
-              }}
-            >
-              {category}
             </div>
           </div>
           

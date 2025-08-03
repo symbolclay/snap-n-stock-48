@@ -189,7 +189,6 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
             <ImageEditor
               originalImage={imageData}
               productName={formData.nome}
-              category={formData.categoria}
               regularPrice={formData.preco_regular.replace(/[^\d,]/g, '').replace(',', '.')}
               offerPrice={formData.preco_oferta ? formData.preco_oferta.replace(/[^\d,]/g, '').replace(',', '.') : undefined}
               onImageGenerated={setEditedImage}
@@ -215,20 +214,6 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
             />
           </div>
 
-          {/* Categoria */}
-          <div className="space-y-2">
-            <Label htmlFor="categoria" className="text-foreground font-medium">
-              Categoria
-            </Label>
-            <Input
-              id="categoria"
-              value={formData.categoria}
-              onChange={(e) => handleInputChange('categoria', e.target.value)}
-              placeholder="Ex: MEDICAMENTO, SUPLEMENTO..."
-              className="bg-secondary/50 border-border focus:border-primary transition-colors"
-              disabled={isLoading}
-            />
-          </div>
 
           {/* Preços */}
           <div className="grid grid-cols-2 gap-4">
