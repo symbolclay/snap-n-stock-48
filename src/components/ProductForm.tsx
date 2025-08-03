@@ -96,7 +96,7 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
     try {
       const productData: ProductData = {
         ...formData,
-        imagem: editedImage || imageData, // Usa a imagem editada se disponível
+        imagem: imageData, // Sempre usar a imagem original
         data: new Date().toISOString()
       };
 
