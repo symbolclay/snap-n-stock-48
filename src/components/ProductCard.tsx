@@ -97,17 +97,9 @@ const ProductCard = ({ product, clientId, onDelete, onEdit, onView }: ProductCar
         // Product name
         drawTextWithBackground(
           product.nome.toUpperCase(),
-          canvas.width / 2, 120,
+          canvas.width / 2, 150,
           canvas.width * 0.85, 100,
           '#FFD700', '#000000', 48
-        );
-
-        // Category
-        drawTextWithBackground(
-          product.categoria.toUpperCase(),
-          canvas.width / 2, 230,
-          canvas.width * 0.7, 80,
-          '#DC2626', '#FFFFFF', 36
         );
 
         // Price
