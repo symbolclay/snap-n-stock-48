@@ -262,7 +262,7 @@ const ProductCard = ({ product, clientId, onDelete, onEdit, onView }: ProductCar
             variant="secondary"
             onClick={downloadOriginalImage}
             className="w-8 h-8 bg-black/50 hover:bg-black/70 border-0"
-            title="Baixar original"
+            title="Baixar foto original"
           >
             <Download className="h-4 w-4 text-white" />
           </Button>
@@ -271,7 +271,7 @@ const ProductCard = ({ product, clientId, onDelete, onEdit, onView }: ProductCar
             variant="secondary"
             onClick={downloadEditedImage}
             className="w-8 h-8 bg-black/50 hover:bg-black/70 border-0"
-            title="Baixar editada"
+            title="Baixar com texto para WhatsApp"
           >
             <Image className="h-4 w-4 text-white" />
           </Button>
