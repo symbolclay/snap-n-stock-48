@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Package, Download, Trash2, Eye, Search } from "lucide-react";
+import { Package, Download, Trash2, Eye, Search, Image } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import ProductCard from "./ProductCard";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +29,7 @@ interface ProductGridProps {
 const ProductGrid = ({ products, clientId, onDeleteProduct, onClearAll, onExport, onEditProduct }: ProductGridProps) => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
+  const [isGeneratingBatch, setIsGeneratingBatch] = useState(false);
 
   const filteredProducts = products.filter(product =>
     product.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -40,6 +41,147 @@ const ProductGrid = ({ products, clientId, onDeleteProduct, onClearAll, onExport
     toast({
       title: "Produto removido",
       description: "O produto foi excluído da lista"
+    });
+  };
+
+  const downloadAllImages = async (format: 'feed' | 'story' | 'both') => {
+    if (filteredProducts.length === 0) {
+      toast({
+        title: "Nenhum produto",
+        description: "Não há produtos para baixar",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGeneratingBatch(true);
+    
+    try {
+      const images: { data: string; filename: string }[] = [];
+      
+      for (const product of filteredProducts) {
+        const img = document.createElement('img');
+        img.crossOrigin = "anonymous";
+        
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = product.imagem;
+        });
+
+        if (format === 'feed' || format === 'both') {
+          const feedImageData = await generateImageForProduct(img, product, 'feed');
+          if (feedImageData) {
+            images.push({
+              data: feedImageData,
+              filename: `${product.nome.replace(/[^a-zA-Z0-9]/g, '_')}_feed.png`
+            });
+          }
+        }
+
+        if (format === 'story' || format === 'both') {
+          const storyImageData = await generateImageForProduct(img, product, 'story');
+          if (storyImageData) {
+            images.push({
+              data: storyImageData,
+              filename: `${product.nome.replace(/[^a-zA-Z0-9]/g, '_')}_story.png`
+            });
+          }
+        }
+      }
+
+      // Create and download zip file
+      const JSZip = await import('jszip');
+      const zip = new JSZip.default();
+      
+      images.forEach(({ data, filename }) => {
+        const base64Data = data.split(',')[1];
+        zip.file(filename, base64Data, { base64: true });
+      });
+
+      const content = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `produtos_${format}_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download concluído",
+        description: `${images.length} imagens baixadas com sucesso`
+      });
+    } catch (error) {
+      console.error('Erro ao gerar imagens:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao gerar as imagens",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingBatch(false);
+    }
+  };
+
+  const generateImageForProduct = (img: HTMLImageElement, product: ProductData, format: 'feed' | 'story'): Promise<string | null> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        resolve(null);
+        return;
+      }
+
+      // Simulate ImageEditor logic
+      const dimensions = format === 'feed' 
+        ? { width: 1080, height: 1080 }
+        : { width: 1080, height: 1920 };
+      
+      canvas.width = dimensions.width;
+      canvas.height = dimensions.height;
+
+      // Fill background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw product image
+      const imgAspect = img.width / img.height;
+      const canvasAspect = canvas.width / canvas.height;
+      
+      let drawWidth, drawHeight, offsetX, offsetY;
+      
+      if (imgAspect > canvasAspect) {
+        drawHeight = canvas.height * 0.7;
+        drawWidth = drawHeight * imgAspect;
+        offsetX = (canvas.width - drawWidth) / 2;
+        offsetY = canvas.height * 0.05;
+      } else {
+        drawWidth = canvas.width * 0.9;
+        drawHeight = drawWidth / imgAspect;
+        offsetX = (canvas.width - drawWidth) / 2;
+        offsetY = canvas.height * 0.05;
+      }
+
+      ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+
+      // Add product info
+      const textY = offsetY + drawHeight + 40;
+      
+      // Product name
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 48px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(product.nome, canvas.width / 2, textY);
+
+      // Price
+      ctx.font = 'bold 36px Arial';
+      const priceText = product.preco_oferta || product.preco_regular;
+      ctx.fillText(priceText, canvas.width / 2, textY + 60);
+
+      resolve(canvas.toDataURL('image/png'));
     });
   };
 
@@ -105,23 +247,59 @@ const ProductGrid = ({ products, clientId, onDeleteProduct, onClearAll, onExport
         </Card>
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Button
-            onClick={onExport}
-            variant="outline"
-            className="flex-1 border-primary/30 hover:bg-primary/10"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Exportar
-          </Button>
-          <Button
-            onClick={onClearAll}
-            variant="outline"
-            className="border-destructive/30 hover:bg-destructive/10 text-destructive"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Limpar Tudo
-          </Button>
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              onClick={onExport}
+              variant="outline"
+              className="flex-1 border-primary/30 hover:bg-primary/10"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exportar Dados
+            </Button>
+            <Button
+              onClick={onClearAll}
+              variant="outline"
+              className="border-destructive/30 hover:bg-destructive/10 text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Limpar Tudo
+            </Button>
+          </div>
+          
+          {/* Download Images */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <Button
+              onClick={() => downloadAllImages('feed')}
+              variant="outline"
+              size="sm"
+              disabled={isGeneratingBatch || filteredProducts.length === 0}
+              className="border-accent/30 hover:bg-accent/10"
+            >
+              <Image className="h-4 w-4 mr-2" />
+              {isGeneratingBatch ? "Gerando..." : "Feed"}
+            </Button>
+            <Button
+              onClick={() => downloadAllImages('story')}
+              variant="outline"
+              size="sm"
+              disabled={isGeneratingBatch || filteredProducts.length === 0}
+              className="border-accent/30 hover:bg-accent/10"
+            >
+              <Image className="h-4 w-4 mr-2" />
+              {isGeneratingBatch ? "Gerando..." : "Story"}
+            </Button>
+            <Button
+              onClick={() => downloadAllImages('both')}
+              variant="outline"
+              size="sm"
+              disabled={isGeneratingBatch || filteredProducts.length === 0}
+              className="border-accent/30 hover:bg-accent/10"
+            >
+              <Image className="h-4 w-4 mr-2" />
+              {isGeneratingBatch ? "Gerando..." : "Ambos"}
+            </Button>
+          </div>
         </div>
       </div>
 
