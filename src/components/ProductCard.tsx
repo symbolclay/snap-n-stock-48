@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,29 @@ const ProductCard = ({ product, clientId, onDelete, onEdit, onView }: ProductCar
   const { toast } = useToast();
   const hasOffer = product.preco_oferta && product.preco_oferta !== product.preco_regular;
   const [editedImage, setEditedImage] = useState<string>('');
+  const [hasWebhook, setHasWebhook] = useState<boolean>(false);
+  
+  useEffect(() => {
+    const checkWebhook = async () => {
+      if (!clientId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('clients')
+          .select('webhook_url')
+          .eq('id', clientId)
+          .single();
+
+        if (!error && data?.webhook_url) {
+          setHasWebhook(true);
+        }
+      } catch (error) {
+        console.error('Erro ao verificar webhook:', error);
+      }
+    };
+
+    checkWebhook();
+  }, [clientId]);
   
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -359,7 +382,7 @@ const ProductCard = ({ product, clientId, onDelete, onEdit, onView }: ProductCar
         </div>
 
         {/* Webhook Button with Confirmation */}
-        {clientId && (
+        {clientId && hasWebhook && (
           <div className="pt-2">
             <AlertDialog>
               <AlertDialogTrigger asChild>
