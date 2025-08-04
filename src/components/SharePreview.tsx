@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, MessageCircle, Download } from "lucide-react";
 import { ImageEditor } from "./ImageEditor";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProductData {
   nome: string;
@@ -18,11 +19,35 @@ interface SharePreviewProps {
   productData: ProductData;
   onBack: () => void;
   onContinue: () => void;
+  clientId?: string;
 }
 
-const SharePreview = ({ productData, onBack, onContinue }: SharePreviewProps) => {
+const SharePreview = ({ productData, onBack, onContinue, clientId }: SharePreviewProps) => {
   const [feedImage, setFeedImage] = useState<string>("");
   const [storyImage, setStoryImage] = useState<string>("");
+  const [hasWebhook, setHasWebhook] = useState<boolean>(false);
+
+  useEffect(() => {
+    const checkWebhook = async () => {
+      if (!clientId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('clients')
+          .select('webhook_url')
+          .eq('id', clientId)
+          .single();
+
+        if (!error && data?.webhook_url) {
+          setHasWebhook(true);
+        }
+      } catch (error) {
+        console.error('Erro ao verificar webhook:', error);
+      }
+    };
+
+    checkWebhook();
+  }, [clientId]);
 
   const downloadImage = (imageData: string, filename: string) => {
     const link = document.createElement('a');
@@ -88,16 +113,18 @@ const SharePreview = ({ productData, onBack, onContinue }: SharePreviewProps) =>
                   <Download className="h-4 w-4 mr-2" />
                   Baixar
                 </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => feedImage && shareToWhatsApp(feedImage, 'feed')}
-                  disabled={!feedImage}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  WhatsApp
-                </Button>
+                {hasWebhook && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => feedImage && shareToWhatsApp(feedImage, 'feed')}
+                    disabled={!feedImage}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    WhatsApp
+                  </Button>
+                )}
               </div>
             </div>
             
@@ -129,16 +156,18 @@ const SharePreview = ({ productData, onBack, onContinue }: SharePreviewProps) =>
                   <Download className="h-4 w-4 mr-2" />
                   Baixar
                 </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => storyImage && shareToWhatsApp(storyImage, 'story')}
-                  disabled={!storyImage}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  WhatsApp
-                </Button>
+                {hasWebhook && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => storyImage && shareToWhatsApp(storyImage, 'story')}
+                    disabled={!storyImage}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    WhatsApp
+                  </Button>
+                )}
               </div>
             </div>
             

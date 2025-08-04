@@ -390,6 +390,7 @@ const CampaignPage = () => {
             productData={savedProduct}
             onBack={() => setCurrentView('welcome')}
             onContinue={() => setCurrentView('welcome')}
+            clientId={client?.id}
           />
         )}
       </div>
