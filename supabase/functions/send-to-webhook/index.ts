@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { webhookUrl, productData } = await req.json()
+    const { webhookUrl, productData, storyImageData } = await req.json()
 
     if (!webhookUrl || !productData) {
       return new Response(
@@ -24,6 +25,53 @@ serve(async (req) => {
       )
     }
 
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    let storyImageUrl = ''
+
+    // Upload story image to storage if provided
+    if (storyImageData) {
+      try {
+        // Convert base64 to blob
+        const base64Data = storyImageData.split(',')[1]
+        const byteCharacters = atob(base64Data)
+        const byteNumbers = new Array(byteCharacters.length)
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i)
+        }
+        const byteArray = new Uint8Array(byteNumbers)
+        
+        // Generate unique filename
+        const timestamp = new Date().getTime()
+        const filename = `story-${timestamp}-${Math.random().toString(36).substring(7)}.jpg`
+        
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('story-images')
+          .upload(filename, byteArray, {
+            contentType: 'image/jpeg',
+            cacheControl: '3600'
+          })
+
+        if (uploadError) {
+          console.error('Erro ao fazer upload da imagem story:', uploadError)
+        } else {
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('story-images')
+            .getPublicUrl(filename)
+          
+          storyImageUrl = publicUrl
+          console.log('Story image uploaded successfully:', storyImageUrl)
+        }
+      } catch (error) {
+        console.error('Erro ao processar imagem story:', error)
+      }
+    }
+
     // Prepare data to send to webhook
     const dataToSend = {
       nome: productData.nome,
@@ -31,7 +79,8 @@ serve(async (req) => {
       preco_oferta: productData.preco_oferta,
       descricao: productData.descricao,
       categoria: productData.categoria,
-      imagem: productData.imagem, // This should be the edited image
+      imagem_feed: productData.imagem, // Feed format as base64
+      imagem_story: storyImageUrl, // Story format as URL
       timestamp: new Date().toISOString()
     }
 
