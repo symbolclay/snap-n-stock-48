@@ -11,6 +11,66 @@ export interface ProductDataForImage {
 const hasOfferFn = (product: ProductDataForImage) =>
   !!product.preco_oferta && product.preco_oferta !== product.preco_regular;
 
+// Shared helper: draws a rounded banner and wraps long text to fit maxWidth
+const drawWrappedBanner = (
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  centerX: number,
+  centerY: number,
+  maxWidth: number,
+  bgColor: string,
+  textColor: string,
+  fontSize: number,
+  radius: number
+) => {
+  const paddingX = 40;
+  const paddingY = 24;
+
+  ctx.font = `bold ${fontSize}px "Arial Black", Arial, sans-serif`;
+
+  const contentMaxWidth = Math.max(10, maxWidth - paddingX * 2);
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let current = '';
+
+  for (const w of words) {
+    const test = current ? current + ' ' + w : w;
+    const { width } = ctx.measureText(test);
+    if (width <= contentMaxWidth) {
+      current = test;
+    } else {
+      if (current) lines.push(current);
+      current = w;
+    }
+  }
+  if (current) lines.push(current);
+
+  const lineHeight = fontSize * 1.25;
+  let longest = 0;
+  for (const l of lines) longest = Math.max(longest, ctx.measureText(l).width);
+
+  const rectWidth = Math.min(maxWidth, longest + paddingX * 2);
+  const rectHeight = lines.length * lineHeight + paddingY * 2;
+
+  // Background
+  ctx.fillStyle = bgColor;
+  ctx.beginPath();
+  // @ts-ignore - roundRect exists in modern CanvasRenderingContext2D
+  ctx.roundRect(centerX - rectWidth / 2, centerY - rectHeight / 2, rectWidth, rectHeight, radius);
+  ctx.fill();
+
+  // Text
+  ctx.fillStyle = textColor;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  let y = centerY - rectHeight / 2 + paddingY + lineHeight / 2;
+  for (const l of lines) {
+    ctx.fillText(l, centerX, y);
+    y += lineHeight;
+  }
+};
+
 export const generateEditedImageForFeed = (product: ProductDataForImage): Promise<string> => {
   return new Promise((resolve) => {
     const canvas = document.createElement('canvas');
@@ -50,16 +110,7 @@ export const generateEditedImageForFeed = (product: ProductDataForImage): Promis
         text: string, x: number, y: number, width: number, height: number,
         bgColor: string, textColor: string, fontSize: number
       ) => {
-        const radius = 15;
-        ctx.fillStyle = bgColor;
-        ctx.beginPath();
-        // @ts-ignore - roundRect exists in modern CanvasRenderingContext2D
-        ctx.roundRect(x - width/2, y - height/2, width, height, radius);
-        ctx.fill();
-
-        ctx.fillStyle = textColor;
-        ctx.font = `bold ${fontSize}px "Arial Black", Arial, sans-serif`;
-        ctx.fillText(text, x, y);
+        drawWrappedBanner(ctx, text, x, y, width, bgColor, textColor, fontSize, 15);
       };
 
       const hasOffer = hasOfferFn(product);
@@ -151,16 +202,7 @@ export const generateEditedImageForStory = (product: ProductDataForImage): Promi
         text: string, x: number, y: number, width: number, height: number,
         bgColor: string, textColor: string, fontSize: number
       ) => {
-        const radius = 20;
-        ctx.fillStyle = bgColor;
-        ctx.beginPath();
-        // @ts-ignore
-        ctx.roundRect(x - width/2, y - height/2, width, height, radius);
-        ctx.fill();
-
-        ctx.fillStyle = textColor;
-        ctx.font = `bold ${fontSize}px "Arial Black", Arial, sans-serif`;
-        ctx.fillText(text, x, y);
+        drawWrappedBanner(ctx, text, x, y, width, bgColor, textColor, fontSize, 20);
       };
 
       const hasOffer = hasOfferFn(product);
