@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Plus, Users, Link2, Eye, Edit, Trash2, ExternalLink, Search, Calendar, Camera, ArrowLeft, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from 'jspdf';
+import { generateEditedImageForFeed } from '@/lib/imageGenerator';
 
 interface Client {
   id: string;
@@ -377,107 +378,109 @@ const AdminPage = () => {
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 20;
-      const imageSize = 80;
-      const imagesPerRow = 2;
+      const margin = 12;
+      const gutter = 8;
+      const columnWidth = (pageWidth - margin * 2 - gutter) / 2;
+      const imageWidth = columnWidth;
+      const imageHeight = imageWidth * 1.25; // Feed 4:5
+      const cardPadding = 4;
+      const cardHeight = imageHeight + 22; // espaço para textos
       let yPosition = margin;
 
-      // Header
+      // Cabeçalho
       pdf.setFontSize(18);
       pdf.text(`Relatório - ${selectedClient.name}`, margin, yPosition);
-      yPosition += 10;
-      
-      pdf.setFontSize(14);
-      pdf.text(`Campanha: ${campaign.name}`, margin, yPosition);
       yPosition += 8;
-      
+      pdf.setFontSize(12);
+      pdf.text(`Campanha: ${campaign.name}`, margin, yPosition);
+      pdf.text(`Total: ${products.length} produtos`, pageWidth - margin - 50, yPosition);
+      yPosition += 6;
       pdf.setFontSize(10);
       pdf.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, margin, yPosition);
-      pdf.text(`Total de produtos: ${products.length}`, pageWidth - margin - 50, yPosition);
-      yPosition += 20;
+      yPosition += 6;
+      pdf.setDrawColor(220, 220, 220);
+      pdf.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 6;
 
-      let productIndex = 0;
-      
+      let col = 0; // 0 = esquerda, 1 = direita
+
       for (const product of products) {
-        const isLeftColumn = productIndex % imagesPerRow === 0;
-        const xPosition = isLeftColumn ? margin : pageWidth / 2 + 10;
-        
-        // Check if we need a new page
-        if (yPosition + imageSize + 40 > pageHeight - margin) {
+        // Quebra de página
+        if (yPosition + cardHeight > pageHeight - margin) {
           pdf.addPage();
           yPosition = margin;
         }
 
+        const x = margin + (col === 0 ? 0 : columnWidth + gutter);
+
+        // Cartão
+        pdf.setFillColor(250, 250, 250);
+        pdf.setDrawColor(230, 230, 230);
+        pdf.rect(x, yPosition, columnWidth, cardHeight, 'FD');
+
         try {
-          // Load and add image
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          
-          await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-            img.src = product.imagem;
+          // Gera imagem de Feed EDITADA com banners
+          const feedImage = await generateEditedImageForFeed({
+            nome: product.nome,
+            preco_regular: product.preco_regular,
+            preco_oferta: product.preco_oferta || undefined,
+            imagem: product.imagem,
           });
 
-          // Convert image to canvas to get base64
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          canvas.width = 300;
-          canvas.height = 300;
-          
-          if (ctx) {
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            const size = Math.min(img.width, img.height);
-            const sx = (img.width - size) / 2;
-            const sy = (img.height - size) / 2;
-            
-            ctx.drawImage(img, sx, sy, size, size, 0, 0, canvas.width, canvas.height);
-            
-            const imageData = canvas.toDataURL('image/jpeg', 0.8);
-            pdf.addImage(imageData, 'JPEG', xPosition, yPosition, imageSize, imageSize);
+          if (feedImage) {
+            pdf.addImage(
+              feedImage,
+              'JPEG',
+              x + cardPadding,
+              yPosition + cardPadding,
+              imageWidth - cardPadding * 2,
+              imageHeight - cardPadding * 2
+            );
+          } else {
+            // placeholder
+            pdf.setDrawColor(200, 200, 200);
+            pdf.rect(x + cardPadding, yPosition + cardPadding, imageWidth - cardPadding * 2, imageHeight - cardPadding * 2);
+            pdf.setFontSize(8);
+            pdf.text('Imagem indisponível', x + cardPadding + 2, yPosition + imageHeight / 2);
           }
-        } catch (error) {
-          console.error('Error loading image:', error);
-          // Draw placeholder rectangle
+        } catch (e) {
           pdf.setDrawColor(200, 200, 200);
-          pdf.rect(xPosition, yPosition, imageSize, imageSize);
+          pdf.rect(x + cardPadding, yPosition + cardPadding, imageWidth - cardPadding * 2, imageHeight - cardPadding * 2);
           pdf.setFontSize(8);
-          pdf.text('Imagem não disponível', xPosition + 5, yPosition + imageSize/2);
+          pdf.text('Imagem indisponível', x + cardPadding + 2, yPosition + imageHeight / 2);
         }
 
-        // Add product info
-        const textX = xPosition;
-        const textY = yPosition + imageSize + 8;
-        
+        // Informações do produto
+        let textX = x + 3;
+        let textY = yPosition + imageHeight + 6;
+
         pdf.setFontSize(10);
         pdf.setFont(undefined, 'bold');
-        pdf.text(product.nome.substring(0, 25) + (product.nome.length > 25 ? '...' : ''), textX, textY);
-        
+        const nameLines = pdf.splitTextToSize(product.nome, columnWidth - 6) as string[];
+        pdf.text(nameLines, textX, textY);
+
         pdf.setFont(undefined, 'normal');
         pdf.setFontSize(9);
-        
-        const price = product.preco_oferta || product.preco_regular;
-        pdf.text(`Preço: ${price}`, textX, textY + 5);
-        
-        const date = new Date(product.created_at).toLocaleDateString('pt-BR');
-        pdf.text(`Data: ${date}`, textX, textY + 10);
-        
-        if (product.descricao) {
-          const description = product.descricao.substring(0, 30) + (product.descricao.length > 30 ? '...' : '');
-          pdf.text(description, textX, textY + 15);
-        }
+        textY += 5 + Math.max(0, nameLines.length - 1) * 5;
 
-        productIndex++;
-        
-        // Move to next row if we completed a row
-        if (productIndex % imagesPerRow === 0) {
-          yPosition += imageSize + 35;
+        const hasOffer = product.preco_oferta && product.preco_oferta !== product.preco_regular;
+        const priceLine = hasOffer
+          ? `De R$ ${product.preco_regular} | Por R$ ${product.preco_oferta}`
+          : `Preço: R$ ${product.preco_regular}`;
+        pdf.text(priceLine, textX, textY);
+        textY += 5;
+
+        const date = new Date(product.created_at).toLocaleDateString('pt-BR');
+        pdf.text(`Data: ${date}`, textX, textY);
+
+        // Avança coluna/linha
+        col = (col + 1) % 2;
+        if (col === 0) {
+          yPosition += cardHeight + 8;
         }
       }
 
-      // Save the PDF
+      // Salvar PDF
       const fileName = `relatorio_${selectedClient.name.replace(/[^a-zA-Z0-9]/g, '_')}_${campaign.name.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
 
