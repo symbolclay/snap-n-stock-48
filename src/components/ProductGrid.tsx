@@ -60,31 +60,34 @@ const ProductGrid = ({ products, clientId, onDeleteProduct, onClearAll, onExport
       const images: { data: string; filename: string }[] = [];
       
       for (const product of filteredProducts) {
-        const img = document.createElement('img');
-        img.crossOrigin = "anonymous";
-        
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-          img.src = product.imagem;
-        });
-
         if (format === 'feed' || format === 'both') {
-          const feedImageData = await generateImageForProduct(img, product, 'feed');
+          const { generateEditedImageForFeed } = await import('@/lib/imageGenerator');
+          const feedImageData = await generateEditedImageForFeed({
+            nome: product.nome,
+            preco_regular: product.preco_regular,
+            preco_oferta: product.preco_oferta,
+            imagem: product.imagem,
+          });
           if (feedImageData) {
             images.push({
               data: feedImageData,
-              filename: `${product.nome.replace(/[^a-zA-Z0-9]/g, '_')}_feed.png`
+              filename: `${product.nome.replace(/[^a-zA-Z0-9]/g, '_')}_feed.jpg`
             });
           }
         }
 
         if (format === 'story' || format === 'both') {
-          const storyImageData = await generateImageForProduct(img, product, 'story');
+          const { generateEditedImageForStory } = await import('@/lib/imageGenerator');
+          const storyImageData = await generateEditedImageForStory({
+            nome: product.nome,
+            preco_regular: product.preco_regular,
+            preco_oferta: product.preco_oferta,
+            imagem: product.imagem,
+          });
           if (storyImageData) {
             images.push({
               data: storyImageData,
-              filename: `${product.nome.replace(/[^a-zA-Z0-9]/g, '_')}_story.png`
+              filename: `${product.nome.replace(/[^a-zA-Z0-9]/g, '_')}_story.jpg`
             });
           }
         }
@@ -125,65 +128,6 @@ const ProductGrid = ({ products, clientId, onDeleteProduct, onClearAll, onExport
     }
   };
 
-  const generateImageForProduct = (img: HTMLImageElement, product: ProductData, format: 'feed' | 'story'): Promise<string | null> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      if (!ctx) {
-        resolve(null);
-        return;
-      }
-
-      // Simulate ImageEditor logic
-      const dimensions = format === 'feed' 
-        ? { width: 1080, height: 1080 }
-        : { width: 1080, height: 1920 };
-      
-      canvas.width = dimensions.width;
-      canvas.height = dimensions.height;
-
-      // Fill background
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Draw product image
-      const imgAspect = img.width / img.height;
-      const canvasAspect = canvas.width / canvas.height;
-      
-      let drawWidth, drawHeight, offsetX, offsetY;
-      
-      if (imgAspect > canvasAspect) {
-        drawHeight = canvas.height * 0.7;
-        drawWidth = drawHeight * imgAspect;
-        offsetX = (canvas.width - drawWidth) / 2;
-        offsetY = canvas.height * 0.05;
-      } else {
-        drawWidth = canvas.width * 0.9;
-        drawHeight = drawWidth / imgAspect;
-        offsetX = (canvas.width - drawWidth) / 2;
-        offsetY = canvas.height * 0.05;
-      }
-
-      ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
-
-      // Add product info
-      const textY = offsetY + drawHeight + 40;
-      
-      // Product name
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 48px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(product.nome, canvas.width / 2, textY);
-
-      // Price
-      ctx.font = 'bold 36px Arial';
-      const priceText = product.preco_oferta || product.preco_regular;
-      ctx.fillText(priceText, canvas.width / 2, textY + 60);
-
-      resolve(canvas.toDataURL('image/png'));
-    });
-  };
 
   const totalProducts = products.length;
   const totalValue = products.reduce((sum, product) => {

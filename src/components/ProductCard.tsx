@@ -76,207 +76,28 @@ const ProductCard = ({ product, clientId, onDelete, onEdit, onView }: ProductCar
   };
 
   // Generate edited image for Feed format
-  const generateEditedImageForFeed = (): Promise<string> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return resolve('');
-
-      canvas.width = 1080;
-      canvas.height = 1350;
-
-      const img = new window.Image();
-      img.crossOrigin = 'anonymous';
-      
-      img.onload = () => {
-        // Cover the entire canvas
-        const imgAspect = img.width / img.height;
-        const canvasAspect = canvas.width / canvas.height;
-        
-        let drawWidth, drawHeight, drawX, drawY;
-        
-        if (imgAspect > canvasAspect) {
-          drawHeight = canvas.height;
-          drawWidth = drawHeight * imgAspect;
-          drawX = (canvas.width - drawWidth) / 2;
-          drawY = 0;
-        } else {
-          drawWidth = canvas.width;
-          drawHeight = drawWidth / imgAspect;
-          drawX = 0;
-          drawY = (canvas.height - drawHeight) / 2;
-        }
-
-        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
-        
-        // Add text overlays
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        const drawTextWithBackground = (
-          text: string, x: number, y: number, width: number, height: number, 
-          bgColor: string, textColor: string, fontSize: number
-        ) => {
-          const radius = 15;
-          ctx.fillStyle = bgColor;
-          ctx.beginPath();
-          ctx.roundRect(x - width/2, y - height/2, width, height, radius);
-          ctx.fill();
-          
-          ctx.fillStyle = textColor;
-          ctx.font = `bold ${fontSize}px "Arial Black", Arial, sans-serif`;
-          ctx.fillText(text, x, y);
-        };
-
-        // Product name
-        drawTextWithBackground(
-          product.nome.toUpperCase(),
-          canvas.width / 2, 150,
-          canvas.width * 0.85, 100,
-          '#FFD700', '#000000', 48
-        );
-
-        // Price
-        const priceText = hasOffer ? `POR R$ ${product.preco_oferta}` : `POR R$ ${product.preco_regular}`;
-        drawTextWithBackground(
-          priceText,
-          canvas.width / 2, canvas.height - 120,
-          canvas.width * 0.9, 110,
-          '#16A34A', '#FFFFFF', 52
-        );
-
-        // Old price if on offer
-        if (hasOffer) {
-          const oldPriceY = canvas.height - 200;
-          const oldPriceText = `De R$ ${product.preco_regular}`;
-          
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-          ctx.beginPath();
-          ctx.roundRect(canvas.width / 2 - 200, oldPriceY - 30, 400, 60, 10);
-          ctx.fill();
-          
-          ctx.fillStyle = '#CCCCCC';
-          ctx.font = 'bold 32px Arial';
-          ctx.fillText(oldPriceText, canvas.width / 2, oldPriceY);
-          
-          const textMetrics = ctx.measureText(oldPriceText);
-          ctx.strokeStyle = '#FF4444';
-          ctx.lineWidth = 4;
-          ctx.beginPath();
-          ctx.moveTo(canvas.width / 2 - textMetrics.width / 2, oldPriceY);
-          ctx.lineTo(canvas.width / 2 + textMetrics.width / 2, oldPriceY);
-          ctx.stroke();
-        }
-
-        const editedImageData = canvas.toDataURL('image/jpeg', 0.9);
-        setEditedImage(editedImageData);
-        resolve(editedImageData);
-      };
-
-      img.src = product.imagem;
+  const generateEditedImageForFeed = async (): Promise<string> => {
+    const { generateEditedImageForFeed: genFeed } = await import('@/lib/imageGenerator');
+    const data = await genFeed({
+      nome: product.nome,
+      preco_regular: product.preco_regular,
+      preco_oferta: product.preco_oferta,
+      imagem: product.imagem,
     });
+    setEditedImage(data);
+    return data;
   };
 
   // Generate edited image for Story format
-  const generateEditedImageForStory = (): Promise<string> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return resolve('');
-
-      // Story format: 9:16 aspect ratio
-      canvas.width = 1080;
-      canvas.height = 1920;
-
-      const img = new window.Image();
-      img.crossOrigin = 'anonymous';
-      
-      img.onload = () => {
-        // Cover the entire canvas
-        const imgAspect = img.width / img.height;
-        const canvasAspect = canvas.width / canvas.height;
-        
-        let drawWidth, drawHeight, drawX, drawY;
-        
-        if (imgAspect > canvasAspect) {
-          drawHeight = canvas.height;
-          drawWidth = drawHeight * imgAspect;
-          drawX = (canvas.width - drawWidth) / 2;
-          drawY = 0;
-        } else {
-          drawWidth = canvas.width;
-          drawHeight = drawWidth / imgAspect;
-          drawX = 0;
-          drawY = (canvas.height - drawHeight) / 2;
-        }
-
-        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
-        
-        // Add text overlays for story format
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        const drawTextWithBackground = (
-          text: string, x: number, y: number, width: number, height: number, 
-          bgColor: string, textColor: string, fontSize: number
-        ) => {
-          const radius = 20;
-          ctx.fillStyle = bgColor;
-          ctx.beginPath();
-          ctx.roundRect(x - width/2, y - height/2, width, height, radius);
-          ctx.fill();
-          
-          ctx.fillStyle = textColor;
-          ctx.font = `bold ${fontSize}px "Arial Black", Arial, sans-serif`;
-          ctx.fillText(text, x, y);
-        };
-
-        // Product name
-        drawTextWithBackground(
-          product.nome.toUpperCase(),
-          canvas.width / 2, 200,
-          canvas.width * 0.9, 120,
-          '#FFD700', '#000000', 56
-        );
-
-        // Price
-        const priceText = hasOffer ? `POR R$ ${product.preco_oferta}` : `POR R$ ${product.preco_regular}`;
-        drawTextWithBackground(
-          priceText,
-          canvas.width / 2, canvas.height - 150,
-          canvas.width * 0.95, 130,
-          '#16A34A', '#FFFFFF', 64
-        );
-
-        // Old price if on offer
-        if (hasOffer) {
-          const oldPriceY = canvas.height - 280;
-          const oldPriceText = `De R$ ${product.preco_regular}`;
-          
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-          ctx.beginPath();
-          ctx.roundRect(canvas.width / 2 - 250, oldPriceY - 40, 500, 80, 15);
-          ctx.fill();
-          
-          ctx.fillStyle = '#CCCCCC';
-          ctx.font = 'bold 40px Arial';
-          ctx.fillText(oldPriceText, canvas.width / 2, oldPriceY);
-          
-          const textMetrics = ctx.measureText(oldPriceText);
-          ctx.strokeStyle = '#FF4444';
-          ctx.lineWidth = 6;
-          ctx.beginPath();
-          ctx.moveTo(canvas.width / 2 - textMetrics.width / 2, oldPriceY);
-          ctx.lineTo(canvas.width / 2 + textMetrics.width / 2, oldPriceY);
-          ctx.stroke();
-        }
-
-        const storyImageData = canvas.toDataURL('image/jpeg', 0.9);
-        resolve(storyImageData);
-      };
-
-      img.src = product.imagem;
+  const generateEditedImageForStory = async (): Promise<string> => {
+    const { generateEditedImageForStory: genStory } = await import('@/lib/imageGenerator');
+    const data = await genStory({
+      nome: product.nome,
+      preco_regular: product.preco_regular,
+      preco_oferta: product.preco_oferta,
+      imagem: product.imagem,
     });
+    return data;
   };
 
   const downloadOriginalImage = () => {
