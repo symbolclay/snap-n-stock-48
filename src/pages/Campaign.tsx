@@ -6,10 +6,10 @@ import ProductForm from "@/components/ProductForm";
 import ProductGrid from "@/components/ProductGrid";
 import PhotoSuccess from "@/components/PhotoSuccess";
 import SharePreview from "@/components/SharePreview";
-import OfferGroupDialog from "@/components/OfferGroupDialog";
 import { Button } from "@/components/ui/button";
 import { Camera, Grid, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { generateEditedImageForFeed } from "@/lib/imageGenerator";
 
 interface Campaign {
   id: string;
@@ -48,7 +48,6 @@ const CampaignPage = () => {
   const [lastSaveSuccess, setLastSaveSuccess] = useState(false);
   const [lastSaveMessage, setLastSaveMessage] = useState("");
   const [editingProduct, setEditingProduct] = useState<ProductData | null>(null);
-  const [showOfferGroupDialog, setShowOfferGroupDialog] = useState(false);
 
   useEffect(() => {
     if (!campaignSlug) return;
@@ -119,34 +118,59 @@ const CampaignPage = () => {
 
   const handlePhotoCapture = (imageData: string) => {
     setCapturedImage(imageData);
-    setShowOfferGroupDialog(true);
-  };
-
-  const handleOfferGroupConfirm = () => {
-    // Aqui você pode adicionar a lógica para enviar para o grupo de oferta
-    // Por exemplo, chamar uma função para enviar via WhatsApp
-    sendToOfferGroup(capturedImage);
     setCurrentView('form');
   };
 
-  const handleOfferGroupCancel = () => {
-    setCurrentView('form');
-  };
+  const sendToOfferGroup = async (productData: ProductData) => {
+    if (!client?.id) return;
 
-  const sendToOfferGroup = (imageData: string) => {
-    // Lógica para enviar para o grupo de oferta
-    // Pode ser via WhatsApp Web API ou outra integração
-    if (navigator.share) {
-      fetch(imageData)
-        .then(res => res.blob())
-        .then(blob => {
-          const file = new File([blob], 'produto-oferta.png', { type: 'image/png' });
-          navigator.share({
-            title: 'Nova oferta disponível!',
-            text: 'Confira este novo produto em oferta',
-            files: [file]
-          });
+    try {
+      // Buscar webhook URL do cliente
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select('webhook_url')
+        .eq('id', client.id)
+        .single();
+
+      if (clientError || !clientData?.webhook_url) {
+        console.log('Cliente não tem webhook configurado');
+        return;
+      }
+
+      // Gerar imagem de feed editada
+      const feedImageData = await generateEditedImageForFeed({
+        nome: productData.nome,
+        preco_regular: productData.preco_regular,
+        preco_oferta: productData.preco_oferta || undefined,
+        imagem: productData.imagem
+      });
+
+      // Chamar edge function para enviar webhook
+      const { error: webhookError } = await supabase.functions.invoke('send-to-webhook', {
+        body: {
+          webhookUrl: clientData.webhook_url,
+          productData: {
+            ...productData,
+            imagem: feedImageData // Usar imagem editada
+          }
+        }
+      });
+
+      if (webhookError) {
+        console.error('Erro ao enviar para webhook:', webhookError);
+        toast({
+          title: "Aviso",
+          description: "Produto salvo, mas não foi possível enviar para o grupo de oferta",
+          variant: "destructive"
         });
+      } else {
+        toast({
+          title: "Sucesso!",
+          description: "Produto salvo e enviado para o grupo de oferta",
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao processar envio para grupo de oferta:', error);
     }
   };
 
@@ -197,6 +221,11 @@ const CampaignPage = () => {
 
         // Recarregar produtos
         await loadProducts(campaign.id);
+        
+        // Enviar para grupo de oferta se não for edição
+        if (!editingProduct) {
+          await sendToOfferGroup(productData);
+        }
         
         // Salvar produto para tela de compartilhamento
         setSavedProduct(productData);
@@ -424,13 +453,7 @@ const CampaignPage = () => {
           />
         )}
 
-        <OfferGroupDialog
-          isOpen={showOfferGroupDialog}
-          onClose={() => setShowOfferGroupDialog(false)}
-          onConfirm={handleOfferGroupConfirm}
-          onCancel={handleOfferGroupCancel}
-          imageData={capturedImage}
-        />
+        {/* Removido OfferGroupDialog */}
       </div>
     </div>
   );
