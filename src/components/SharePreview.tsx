@@ -113,18 +113,6 @@ const SharePreview = ({ productData, onBack, onContinue, clientId }: SharePrevie
                   <Download className="h-4 w-4 mr-2" />
                   Baixar
                 </Button>
-                {hasWebhook && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => feedImage && shareToWhatsApp(feedImage, 'feed')}
-                    disabled={!feedImage}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    WhatsApp
-                  </Button>
-                )}
               </div>
             </div>
             
@@ -156,18 +144,6 @@ const SharePreview = ({ productData, onBack, onContinue, clientId }: SharePrevie
                   <Download className="h-4 w-4 mr-2" />
                   Baixar
                 </Button>
-                {hasWebhook && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => storyImage && shareToWhatsApp(storyImage, 'story')}
-                    disabled={!storyImage}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    WhatsApp
-                  </Button>
-                )}
               </div>
             </div>
             

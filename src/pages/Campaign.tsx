@@ -6,6 +6,7 @@ import ProductForm from "@/components/ProductForm";
 import ProductGrid from "@/components/ProductGrid";
 import PhotoSuccess from "@/components/PhotoSuccess";
 import SharePreview from "@/components/SharePreview";
+import OfferGroupDialog from "@/components/OfferGroupDialog";
 import { Button } from "@/components/ui/button";
 import { Camera, Grid, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -47,6 +48,7 @@ const CampaignPage = () => {
   const [lastSaveSuccess, setLastSaveSuccess] = useState(false);
   const [lastSaveMessage, setLastSaveMessage] = useState("");
   const [editingProduct, setEditingProduct] = useState<ProductData | null>(null);
+  const [showOfferGroupDialog, setShowOfferGroupDialog] = useState(false);
 
   useEffect(() => {
     if (!campaignSlug) return;
@@ -117,7 +119,35 @@ const CampaignPage = () => {
 
   const handlePhotoCapture = (imageData: string) => {
     setCapturedImage(imageData);
+    setShowOfferGroupDialog(true);
+  };
+
+  const handleOfferGroupConfirm = () => {
+    // Aqui você pode adicionar a lógica para enviar para o grupo de oferta
+    // Por exemplo, chamar uma função para enviar via WhatsApp
+    sendToOfferGroup(capturedImage);
     setCurrentView('form');
+  };
+
+  const handleOfferGroupCancel = () => {
+    setCurrentView('form');
+  };
+
+  const sendToOfferGroup = (imageData: string) => {
+    // Lógica para enviar para o grupo de oferta
+    // Pode ser via WhatsApp Web API ou outra integração
+    if (navigator.share) {
+      fetch(imageData)
+        .then(res => res.blob())
+        .then(blob => {
+          const file = new File([blob], 'produto-oferta.png', { type: 'image/png' });
+          navigator.share({
+            title: 'Nova oferta disponível!',
+            text: 'Confira este novo produto em oferta',
+            files: [file]
+          });
+        });
+    }
   };
 
   const handleSaveProduct = async (productData: ProductData) => {
@@ -393,6 +423,14 @@ const CampaignPage = () => {
             clientId={client?.id}
           />
         )}
+
+        <OfferGroupDialog
+          isOpen={showOfferGroupDialog}
+          onClose={() => setShowOfferGroupDialog(false)}
+          onConfirm={handleOfferGroupConfirm}
+          onCancel={handleOfferGroupCancel}
+          imageData={capturedImage}
+        />
       </div>
     </div>
   );
