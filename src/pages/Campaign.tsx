@@ -261,10 +261,19 @@ const CampaignPage = () => {
         // Recarregar produtos
         await loadProducts(campaign.id);
         
-        // Mostrar dialog de confirmação para envio ao grupo de oferta se não for edição
+        // Verificar se cliente tem webhook configurado antes de mostrar o popup
         if (!editingProduct) {
-          setPendingOfferProduct(productData);
-          setShowOfferGroupDialog(true);
+          const { data: clientData } = await supabase
+            .from('clients')
+            .select('webhook_url')
+            .eq('id', campaign.client_id)
+            .single();
+          
+          // Só mostrar popup se tiver webhook configurado
+          if (clientData?.webhook_url) {
+            setPendingOfferProduct(productData);
+            setShowOfferGroupDialog(true);
+          }
         }
         
         // Salvar produto para tela de compartilhamento
