@@ -6,6 +6,7 @@ import ProductForm from "@/components/ProductForm";
 import ProductGrid from "@/components/ProductGrid";
 import PhotoSuccess from "@/components/PhotoSuccess";
 import SharePreview from "@/components/SharePreview";
+import OfferGroupConfirmDialog from "@/components/OfferGroupConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Camera, Grid, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +49,9 @@ const CampaignPage = () => {
   const [lastSaveSuccess, setLastSaveSuccess] = useState(false);
   const [lastSaveMessage, setLastSaveMessage] = useState("");
   const [editingProduct, setEditingProduct] = useState<ProductData | null>(null);
+  const [showOfferGroupDialog, setShowOfferGroupDialog] = useState(false);
+  const [pendingOfferProduct, setPendingOfferProduct] = useState<ProductData | null>(null);
+  const [sendingToOfferGroup, setSendingToOfferGroup] = useState(false);
 
   useEffect(() => {
     if (!campaignSlug) return;
@@ -123,6 +127,8 @@ const CampaignPage = () => {
 
   const sendToOfferGroup = async (productData: ProductData) => {
     if (!client?.id) return;
+    
+    setSendingToOfferGroup(true);
 
     try {
       // Buscar webhook URL do cliente
@@ -134,6 +140,11 @@ const CampaignPage = () => {
 
       if (clientError || !clientData?.webhook_url) {
         console.log('Cliente não tem webhook configurado');
+        toast({
+          title: "Aviso",
+          description: "Cliente não tem webhook configurado para grupo de oferta",
+          variant: "destructive"
+        });
         return;
       }
 
@@ -159,19 +170,38 @@ const CampaignPage = () => {
       if (webhookError) {
         console.error('Erro ao enviar para webhook:', webhookError);
         toast({
-          title: "Aviso",
-          description: "Produto salvo, mas não foi possível enviar para o grupo de oferta",
+          title: "Erro",
+          description: "Não foi possível enviar para o grupo de oferta",
           variant: "destructive"
         });
       } else {
         toast({
           title: "Sucesso!",
-          description: "Produto salvo e enviado para o grupo de oferta",
+          description: "Produto enviado para o grupo de oferta com sucesso!",
         });
+        setShowOfferGroupDialog(false);
       }
     } catch (error) {
       console.error('Erro ao processar envio para grupo de oferta:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao processar envio para grupo de oferta",
+        variant: "destructive"
+      });
+    } finally {
+      setSendingToOfferGroup(false);
     }
+  };
+
+  const handleOfferGroupConfirm = async () => {
+    if (pendingOfferProduct) {
+      await sendToOfferGroup(pendingOfferProduct);
+    }
+  };
+
+  const handleOfferGroupClose = () => {
+    setShowOfferGroupDialog(false);
+    setPendingOfferProduct(null);
   };
 
   const handleSaveProduct = async (productData: ProductData) => {
@@ -222,9 +252,10 @@ const CampaignPage = () => {
         // Recarregar produtos
         await loadProducts(campaign.id);
         
-        // Enviar para grupo de oferta se não for edição
+        // Mostrar dialog de confirmação para envio ao grupo de oferta se não for edição
         if (!editingProduct) {
-          await sendToOfferGroup(productData);
+          setPendingOfferProduct(productData);
+          setShowOfferGroupDialog(true);
         }
         
         // Salvar produto para tela de compartilhamento
@@ -453,7 +484,13 @@ const CampaignPage = () => {
           />
         )}
 
-        {/* Removido OfferGroupDialog */}
+        <OfferGroupConfirmDialog
+          isOpen={showOfferGroupDialog}
+          onClose={handleOfferGroupClose}
+          onConfirm={handleOfferGroupConfirm}
+          productData={pendingOfferProduct}
+          isLoading={sendingToOfferGroup}
+        />
       </div>
     </div>
   );
