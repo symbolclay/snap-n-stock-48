@@ -10,7 +10,7 @@ import OfferGroupConfirmDialog from "@/components/OfferGroupConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Camera, Grid, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { generateEditedImageForFeed } from "@/lib/imageGenerator";
+import { generateEditedImageForFeed, generateEditedImageForStory } from "@/lib/imageGenerator";
 
 interface Campaign {
   id: string;
@@ -156,6 +156,14 @@ const CampaignPage = () => {
         imagem: productData.imagem
       });
 
+      // Gerar imagem de story editada
+      const storyImageData = await generateEditedImageForStory({
+        nome: productData.nome,
+        preco_regular: productData.preco_regular,
+        preco_oferta: productData.preco_oferta || undefined,
+        imagem: productData.imagem
+      });
+
       // Chamar edge function para enviar webhook
       const { error: webhookError } = await supabase.functions.invoke('send-to-webhook', {
         body: {
@@ -163,7 +171,8 @@ const CampaignPage = () => {
           productData: {
             ...productData,
             imagem: feedImageData // Usar imagem editada
-          }
+          },
+          storyImageData: storyImageData // Adicionar imagem de story
         }
       });
 
