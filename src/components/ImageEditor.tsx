@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,7 @@ interface ImageEditorProps {
   offerPrice?: string;
   onImageGenerated: (editedImage: string) => void;
   format?: 'mobile' | 'web'; // 1080x1920 ou 1080x1350
+  debounceMs?: number;
 }
 
 interface ColorTheme {
@@ -66,7 +67,8 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
   regularPrice,
   offerPrice,
   onImageGenerated,
-  format = 'mobile'
+  format = 'mobile',
+  debounceMs = 300
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [colorTheme, setColorTheme] = useState<ColorTheme>(defaultTheme);
@@ -76,7 +78,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
     ? { width: 1080, height: 1920 }
     : { width: 1080, height: 1350 };
 
-  const generateEditedImage = async () => {
+  const generateEditedImage = useCallback(async () => {
     if (!canvasRef.current) return;
     
     setIsGenerating(true);
@@ -224,11 +226,15 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
     };
 
     img.src = originalImage;
-  };
+  }, [originalImage, productName, regularPrice, offerPrice, colorTheme, format, onImageGenerated]);
 
   useEffect(() => {
-    generateEditedImage();
-  }, [originalImage, productName, regularPrice, offerPrice, colorTheme, format]);
+    const timeoutId = setTimeout(() => {
+      generateEditedImage();
+    }, debounceMs);
+
+    return () => clearTimeout(timeoutId);
+  }, [generateEditedImage, debounceMs]);
 
   return (
     <div className="space-y-4">

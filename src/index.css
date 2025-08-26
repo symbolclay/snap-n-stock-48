@@ -122,4 +122,50 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Fixes para dispositivos Android */
+  .mobile-viewport-stable {
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height para Android */
+  }
+
+  .android-input-fix {
+    /* Previne zoom em inputs no Android */
+    font-size: 16px !important;
+    /* Melhora performance de inputs */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+
+  .touch-manipulation {
+    touch-action: manipulation;
+    /* Otimiza scroll em dispositivos móveis */
+    -webkit-overflow-scrolling: touch;
+    /* Previne problemas de repaint */
+    will-change: scroll-position;
+  }
+
+  /* Fixes específicos para Android Chrome */
+  @supports (-webkit-touch-callout: none) {
+    .mobile-viewport-stable {
+      /* Altura fixa para iOS Safari */
+      height: 100vh;
+    }
+  }
+
+  /* Media query para dispositivos Android */
+  @media screen and (max-width: 768px) {
+    .android-input-fix:focus {
+      /* Previne zoom automático em Android */
+      transform: translateZ(0);
+      zoom: 1;
+    }
+    
+    /* Otimizações para performance mobile */
+    .mobile-viewport-stable * {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+  }
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,12 +41,12 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
   const [imageFormat, setImageFormat] = useState<'mobile' | 'web'>('mobile');
   const [editedImage, setEditedImage] = useState<string>("");
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = useCallback((field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
-  };
+  }, []);
 
   const formatCurrency = (value: string) => {
     // Remove tudo que não for número
@@ -61,10 +61,10 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
     return numbers ? formatted : '';
   };
 
-  const handlePriceChange = (field: string, value: string) => {
+  const handlePriceChange = useCallback((field: string, value: string) => {
     const formatted = formatCurrency(value);
     handleInputChange(field, formatted);
-  };
+  }, [handleInputChange]);
 
   const validateForm = () => {
     if (!formData.nome.trim()) {
@@ -122,7 +122,7 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col max-w-full overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col max-w-full overflow-hidden mobile-viewport-stable">
       {/* Header */}
       <div className="p-4 border-b border-border bg-card/50 backdrop-blur-sm flex-shrink-0">
         <div className="flex items-center justify-between">
@@ -146,7 +146,7 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-6 pb-24 max-w-full">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-6 pb-24 max-w-full touch-manipulation">
         {/* Image Preview */}
         <Card className="p-4 animate-fade-in-up">
           <div className="relative aspect-square rounded-xl overflow-hidden bg-secondary/20">
@@ -193,6 +193,7 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
               offerPrice={formData.preco_oferta ? formData.preco_oferta.replace(/[^\d,]/g, '').replace(',', '.') : undefined}
               onImageGenerated={setEditedImage}
               format={imageFormat}
+              debounceMs={800}
             />
           </div>
         </Card>
@@ -204,14 +205,17 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
             <Label htmlFor="nome" className="text-foreground font-medium">
               Nome do Produto *
             </Label>
-            <Input
-              id="nome"
-              value={formData.nome}
-              onChange={(e) => handleInputChange('nome', e.target.value)}
-              placeholder="Ex: Café Premium Torrado"
-              className="bg-secondary/50 border-border focus:border-primary transition-colors"
-              disabled={isLoading}
-            />
+              <Input
+                id="nome"
+                value={formData.nome}
+                onChange={(e) => handleInputChange('nome', e.target.value)}
+                placeholder="Ex: Café Premium Torrado"
+                className="bg-secondary/50 border-border focus:border-primary transition-colors android-input-fix"
+                disabled={isLoading}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
+              />
           </div>
 
 
@@ -221,28 +225,34 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
               <Label htmlFor="preco_regular" className="text-foreground font-medium">
                 Preço Regular *
               </Label>
-              <Input
-                id="preco_regular"
-                value={formData.preco_regular}
-                onChange={(e) => handlePriceChange('preco_regular', e.target.value)}
-                placeholder="R$ 0,00"
-                className="bg-secondary/50 border-border focus:border-primary transition-colors"
-                disabled={isLoading}
-              />
-            </div>
+                <Input
+                  id="preco_regular"
+                  value={formData.preco_regular}
+                  onChange={(e) => handlePriceChange('preco_regular', e.target.value)}
+                  placeholder="R$ 0,00"
+                  className="bg-secondary/50 border-border focus:border-primary transition-colors android-input-fix"
+                  disabled={isLoading}
+                  inputMode="numeric"
+                  autoComplete="off"
+                  autoCorrect="off"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="preco_oferta" className="text-foreground font-medium">
-                Preço Oferta
-              </Label>
-              <Input
-                id="preco_oferta"
-                value={formData.preco_oferta}
-                onChange={(e) => handlePriceChange('preco_oferta', e.target.value)}
-                placeholder="R$ 0,00"
-                className="bg-secondary/50 border-border focus:border-primary transition-colors"
-                disabled={isLoading}
-              />
+              <div className="space-y-2">
+                <Label htmlFor="preco_oferta" className="text-foreground font-medium">
+                  Preço Oferta
+                </Label>
+                <Input
+                  id="preco_oferta"
+                  value={formData.preco_oferta}
+                  onChange={(e) => handlePriceChange('preco_oferta', e.target.value)}
+                  placeholder="R$ 0,00"
+                  className="bg-secondary/50 border-border focus:border-primary transition-colors android-input-fix"
+                  disabled={isLoading}
+                  inputMode="numeric"
+                  autoComplete="off"
+                  autoCorrect="off"
+                />
             </div>
           </div>
 
@@ -256,9 +266,12 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
               value={formData.descricao}
               onChange={(e) => handleInputChange('descricao', e.target.value)}
               placeholder="Detalhes do produto, peso, características..."
-              className="bg-secondary/50 border-border focus:border-primary transition-colors resize-none"
+              className="bg-secondary/50 border-border focus:border-primary transition-colors resize-none android-input-fix"
               rows={3}
               disabled={isLoading}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck="false"
             />
           </div>
         </div>
