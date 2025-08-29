@@ -127,6 +127,13 @@
   .mobile-viewport-stable {
     height: 100vh;
     height: 100dvh; /* Dynamic viewport height para Android */
+    overflow: hidden;
+    -webkit-overflow-scrolling: touch;
+    /* Otimizações para Android antigos */
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
   }
 
   .android-input-fix {
@@ -134,16 +141,26 @@
     font-size: 16px !important;
     /* Melhora performance de inputs */
     transform: translateZ(0);
+    -webkit-transform: translateZ(0);
     backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
     perspective: 1000px;
+    /* Controle de will-change conservador */
+    will-change: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Previne problemas de repaint/reflow */
+    contain: layout style paint;
   }
 
   .touch-manipulation {
     touch-action: manipulation;
     /* Otimiza scroll em dispositivos móveis */
     -webkit-overflow-scrolling: touch;
-    /* Previne problemas de repaint */
-    will-change: scroll-position;
+    /* Desabilita will-change para evitar problemas em Android antigos */
+    will-change: auto;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
   }
 
   /* Fixes específicos para Android Chrome */

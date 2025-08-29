@@ -164,8 +164,8 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
       );
 
 
-      // Preço (parte inferior)
-      const priceY = format === 'mobile' ? canvas.height - 150 : canvas.height - 120;
+      // Preço (parte inferior) - ajustar posição para story
+      const priceY = format === 'mobile' ? canvas.height - 220 : canvas.height - 120;
       const priceText = offerPrice 
         ? `POR R$ ${offerPrice}` 
         : `POR R$ ${regularPrice}`;
