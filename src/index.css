@@ -184,5 +184,17 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
+
+    /* Garantir que botões importantes sejam sempre visíveis no mobile */
+    .mobile-capture-button {
+      position: fixed !important;
+      bottom: max(2rem, env(safe-area-inset-bottom, 2rem)) !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      z-index: 9999 !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
   }
 }
