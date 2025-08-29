@@ -278,7 +278,7 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
       </div>
 
       {/* Bottom Actions */}
-      <div className="p-4 border-t border-border bg-card/50 backdrop-blur-sm flex-shrink-0 fixed bottom-0 left-0 right-0 z-10 max-w-full">
+      <div className="p-4 border-t border-border bg-card/50 backdrop-blur-sm flex-shrink-0 mobile-save-button">
         <Button
           onClick={handleSave}
           disabled={isLoading}
