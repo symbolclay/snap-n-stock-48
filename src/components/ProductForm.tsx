@@ -193,7 +193,7 @@ const ProductForm = ({ imageData, productData, onSave, onClose, onRetakePhoto }:
               offerPrice={formData.preco_oferta ? formData.preco_oferta.replace(/[^\d,]/g, '').replace(',', '.') : undefined}
               onImageGenerated={setEditedImage}
               format={imageFormat}
-              debounceMs={1200}
+              debounceMs={800}
             />
           </div>
         </Card>
