@@ -172,11 +172,11 @@ const CameraCapture = ({ onCapture, onClose }: CameraCaptureProps) => {
         </div>
 
         {/* Capture Button */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 mobile-capture-button">
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
           <Button
             onClick={capturePhoto}
             disabled={!isStreaming || hasCapture}
-            className={`w-20 h-20 rounded-full transition-all duration-300 shadow-2xl ${
+            className={`w-20 h-20 rounded-full transition-all duration-300 ${
               hasCapture 
                 ? 'bg-primary animate-bounce-in' 
                 : isFrameGood 
