@@ -76,7 +76,9 @@ export type Database = {
       products: {
         Row: {
           campaign_id: string
+          categoria: string | null
           created_at: string
+          descricao: string | null
           id: string
           imagem: string
           nome: string
@@ -85,7 +87,9 @@ export type Database = {
         }
         Insert: {
           campaign_id: string
+          categoria?: string | null
           created_at?: string
+          descricao?: string | null
           id?: string
           imagem: string
           nome: string
@@ -94,7 +98,9 @@ export type Database = {
         }
         Update: {
           campaign_id?: string
+          categoria?: string | null
           created_at?: string
+          descricao?: string | null
           id?: string
           imagem?: string
           nome?: string
