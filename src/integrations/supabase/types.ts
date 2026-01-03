@@ -77,6 +77,7 @@ export type Database = {
         Row: {
           campaign_id: string
           categoria: string | null
+          client_id: string | null
           created_at: string
           descricao: string | null
           id: string
@@ -88,6 +89,7 @@ export type Database = {
         Insert: {
           campaign_id: string
           categoria?: string | null
+          client_id?: string | null
           created_at?: string
           descricao?: string | null
           id?: string
@@ -99,6 +101,7 @@ export type Database = {
         Update: {
           campaign_id?: string
           categoria?: string | null
+          client_id?: string | null
           created_at?: string
           descricao?: string | null
           id?: string
@@ -113,6 +116,13 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
