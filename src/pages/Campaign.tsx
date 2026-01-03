@@ -103,7 +103,7 @@ const CampaignPage = () => {
 
       if (error) throw error;
 
-      const formattedProducts: ProductData[] = data.map(product => ({
+      const formattedProducts: ProductData[] = data.map((product: any) => ({
         id: product.id,
         nome: product.nome,
         preco_regular: product.preco_regular,
